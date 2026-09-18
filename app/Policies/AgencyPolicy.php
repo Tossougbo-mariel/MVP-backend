@@ -24,7 +24,7 @@ class AgencyPolicy
     // Modifier les paramètres de l'agence (nom, description) — admin uniquement
     public function update(User $user, Agency $agency): Response
     {
-        return $user->roleInAgency($agency->id) === 'admin'
+        return $user->isAdminOfAgency($agency->id)
             ? Response::allow()
             : Response::deny('Seul un admin peut modifier les paramètres de cette agence.');
     }
@@ -39,6 +39,6 @@ class AgencyPolicy
     // Gérer les membres : inviter, promouvoir, retirer — admin uniquement
     public function manageMembers(User $user, Agency $agency): bool
     {
-        return $user->roleInAgency($agency->id) === 'admin';
+        return $user->isAdminOfAgency($agency->id);
     }
 }

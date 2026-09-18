@@ -12,30 +12,30 @@ class ProjectPolicy
     public function view(User $user, Project $project): bool
     {
         return $project->hasMember($user->id)
-            || $user->roleInAgency($project->agency_id) === 'admin';
+            || $user->isAdminOfAgency($project->agency_id);
     }
 
     // Créer un projet — admin de l'agence uniquement
     public function create(User $user, int $agencyId): bool
     {
-        return $user->roleInAgency($agencyId) === 'admin';
+        return $user->isAdminOfAgency($agencyId);
     }
 
     // Modifier un projet (dates, statut, description...) — admin uniquement
     public function update(User $user, Project $project): bool
     {
-        return $user->roleInAgency($project->agency_id) === 'admin';
+        return $user->isAdminOfAgency($project->agency_id);
     }
 
     // Supprimer un projet — admin uniquement
     public function delete(User $user, Project $project): bool
     {
-        return $user->roleInAgency($project->agency_id) === 'admin';
+        return $user->isAdminOfAgency($project->agency_id);
     }
 
     // Ajouter/retirer des membres sur CE projet précis — admin uniquement
     public function manageMembers(User $user, Project $project): bool
     {
-        return $user->roleInAgency($project->agency_id) === 'admin';
+        return $user->isAdminOfAgency($project->agency_id);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Comment;
 use App\Models\Task;
 use Illuminate\Http\Request;
@@ -31,6 +32,15 @@ class CommentController extends Controller
             ...$data,
             'task_id' => $task->id,
             'user_id' => $request->user()->id,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'agency_id' => $task->project?->agency_id,
+            'project_id' => $task->project_id,
+            'task_id' => $task->id,
+            'action' => 'commentaire',
+            'description' => "a commenté la tâche « {$task->title} »",
         ]);
 
         $comment->load('user:id,name,email,avatar');

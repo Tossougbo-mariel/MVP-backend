@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agency;
 use App\Models\AgencyMember;
+use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AgencyInvitation;
 use Illuminate\Http\Request;
@@ -71,15 +72,44 @@ class AgencyMemberController extends Controller
             'status' => ['sometimes', 'string', 'in:en_attente,actif'],
         ]);
 
+        abort_if(
+            $agencyMember->user_id === $agency->owner_id
+            && array_key_exists('role', $data)
+            && $data['role'] !== 'admin',
+            422,
+            "Le rôle du propriétaire de l'agence ne peut pas être modifié."
+        );
+
         $agencyMember->update($data);
 
         return response()->json($agencyMember);
     }
 
     // DELETE /api/agencies/{agency}/members/{agencyMember}
-    public function destroy(Agency $agency, AgencyMember $agencyMember)
+    public function destroy(Request $request, Agency $agency, AgencyMember $agencyMember)
     {
         $this->authorize('manageMembers', $agency);
+
+        abort_if($agencyMember->agency_id !== $agency->id, 404);
+
+        abort_if(
+            $agencyMember->user_id === $agency->owner_id,
+            422,
+            "Le propriétaire de l'agence ne peut pas être retiré."
+        );
+
+        $activeTasks = Task::whereHas('project', fn ($q) => $q->where('agency_id', $agency->id))
+            ->where('assigned_to', $agencyMember->user_id)
+            ->whereIn('status', ['a_faire', 'en_cours', 'en_revision'])
+            ->count();
+
+        if ($activeTasks > 0 && !$request->boolean('confirm')) {
+            return response()->json([
+                'message' => "Ce membre a {$activeTasks} tâche(s) en cours dans les projets de l'agence.",
+                'active_tasks_count' => $activeTasks,
+                'requires_confirmation' => true,
+            ], 409);
+        }
 
         $agencyMember->delete();
 

@@ -27,7 +27,7 @@ class ActivityLogController extends Controller
 
         } elseif ($request->filled('agency_id')) {
             $agency = Agency::findOrFail($request->agency_id);
-            abort_unless($request->user()->roleInAgency($agency->id) === 'admin', 403);
+            abort_unless($request->user()->isAdminOfAgency($agency->id), 403);
             $query->where('agency_id', $agency->id);
 
         } else {

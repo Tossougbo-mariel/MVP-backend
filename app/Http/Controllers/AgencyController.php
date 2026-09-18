@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\AgencyMember;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AgencyController extends Controller
 {
@@ -38,18 +39,22 @@ class AgencyController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        $agency = Agency::create([
-            ...$data,
-            'owner_id' => $request->user()->id,
-        ]);
+        $agency = DB::transaction(function () use ($data, $request) {
+            $agency = Agency::create([
+                ...$data,
+                'owner_id' => $request->user()->id,
+            ]);
 
-        // Règle validée plus tôt : celui qui crée l'agence en devient automatiquement Admin
-        AgencyMember::create([
-            'agency_id' => $agency->id,
-            'user_id' => $request->user()->id,
-            'role' => 'admin',
-            'status' => 'actif',
-        ]);
+            // Règle validée plus tôt : celui qui crée l'agence en devient automatiquement Admin
+            AgencyMember::create([
+                'agency_id' => $agency->id,
+                'user_id' => $request->user()->id,
+                'role' => 'admin',
+                'status' => 'actif',
+            ]);
+
+            return $agency;
+        });
 
         return response()->json($agency, 201);
     }

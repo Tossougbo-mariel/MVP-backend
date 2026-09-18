@@ -96,6 +96,17 @@ class User extends Authenticatable
             ->value('role');
     }
 
+    public function isAdminOfAgency(int $agencyId): bool
+    {
+        $agency = \App\Models\Agency::find($agencyId);
+        if ($agency && $agency->owner_id === $this->id) {
+            return true; // le owner a toujours les droits admin,
+                          // même si sa ligne agency_members est absente
+                          // ou désynchronisée
+        }
+        return $this->roleInAgency($agencyId) === 'admin';
+    }
+
     public function isActiveMemberOfAgency(int $agencyId): bool
     {
         return $this->agencyMemberships()

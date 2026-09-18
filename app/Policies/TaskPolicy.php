@@ -14,7 +14,7 @@ class TaskPolicy
     {
         $agencyId = $task->project->agency_id;
 
-        return $user->roleInAgency($agencyId) === 'admin'
+        return $user->isAdminOfAgency($agencyId)
             || $task->project->hasMember($user->id);
     }
 
@@ -23,14 +23,14 @@ class TaskPolicy
     {
         $agencyId = Project::findOrFail($projectId)->agency_id;
 
-        return $user->roleInAgency($agencyId) === 'admin';
+        return $user->isAdminOfAgency($agencyId);
     }
 
     // Modifier une tâche en entier (titre, description, priorité, responsable, dates)
     // — admin uniquement
     public function update(User $user, Task $task): bool
     {
-        return $user->roleInAgency($task->project->agency_id) === 'admin';
+        return $user->isAdminOfAgency($task->project->agency_id);
     }
 
     // Changer UNIQUEMENT le statut — admin, OU membre à qui la tâche est assignée
@@ -38,20 +38,20 @@ class TaskPolicy
     {
         $agencyId = $task->project->agency_id;
 
-        return $user->roleInAgency($agencyId) === 'admin'
+        return $user->isAdminOfAgency($agencyId)
             || $task->assigned_to === $user->id;
     }
 
     // Supprimer une tâche — admin uniquement
     public function delete(User $user, Task $task): bool
     {
-        return $user->roleInAgency($task->project->agency_id) === 'admin';
+        return $user->isAdminOfAgency($task->project->agency_id);
     }
 
     // Commenter — admin, ou membre du projet
     public function comment(User $user, Task $task): bool
     {
-        return $user->roleInAgency($task->project->agency_id) === 'admin'
+        return $user->isAdminOfAgency($task->project->agency_id)
             || $task->project->hasMember($user->id);
     }
 }

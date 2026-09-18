@@ -13,7 +13,7 @@ class CommentPolicy
     {
         $agencyId = $comment->task->project->agency_id;
 
-        return $user->roleInAgency($agencyId) === 'admin'
+        return $user->isAdminOfAgency($agencyId)
             || $comment->task->project->hasMember($user->id);
     }
 
@@ -22,7 +22,7 @@ class CommentPolicy
     {
         $task = Task::findOrFail($taskId);
 
-        return $user->roleInAgency($task->project->agency_id) === 'admin'
+        return $user->isAdminOfAgency($task->project->agency_id)
             || $task->project->hasMember($user->id);
     }
 

@@ -29,14 +29,25 @@ class TaskObserver
         $userId = auth()->id() ?? $task->created_by;
 
         if ($task->wasChanged('status')) {
-            ActivityLog::create([
-                'user_id' => $userId,
-                'agency_id' => $task->project?->agency_id,
-                'project_id' => $task->project_id,
-                'task_id' => $task->id,
-                'action' => 'changement_statut',
-                'description' => "a changé le statut de « {$task->title} » en ".$task->status,
-            ]);
+            if ($task->status === 'terminee') {
+                ActivityLog::create([
+                    'user_id' => $userId,
+                    'agency_id' => $task->project?->agency_id,
+                    'project_id' => $task->project_id,
+                    'task_id' => $task->id,
+                    'action' => 'tache_terminee',
+                    'description' => "a marqué la tâche « {$task->title} » comme terminée",
+                ]);
+            } else {
+                ActivityLog::create([
+                    'user_id' => $userId,
+                    'agency_id' => $task->project?->agency_id,
+                    'project_id' => $task->project_id,
+                    'task_id' => $task->id,
+                    'action' => 'changement_statut',
+                    'description' => "a changé le statut de « {$task->title} » en ".$task->status,
+                ]);
+            }
 
             if ($task->status === 'terminee' && $task->assigned_to) {
                 $this->notify($task->assigned_to, 'tache_terminee', 'Tâche terminée', "« {$task->title} » a été marquée comme terminée");

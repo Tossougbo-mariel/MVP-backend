@@ -35,18 +35,20 @@ class TaskController extends Controller
                 'exists:users,id',
                 Rule::exists('project_members', 'user_id')->where('project_id', $project->id),
             ],
-            'start_date' => ['nullable', 'date', 'before_or_equal:due_date', function ($attribute, $value, $fail) use ($project) {
+            'start_date' => ['required', 'date', 'before_or_equal:due_date', function ($attribute, $value, $fail) use ($project) {
                 if ($value && $project->start_date && $value < $project->start_date) {
                     $fail("La date de début doit être postérieure ou égale au début du projet ({$project->start_date}).");
                 }
             }],
-            'due_date' => ['nullable', 'date', 'after_or_equal:start_date', function ($attribute, $value, $fail) use ($project) {
+            'due_date' => ['required', 'date', 'after_or_equal:start_date', function ($attribute, $value, $fail) use ($project) {
                 if ($value && $project->due_date && $value > $project->due_date) {
                     $fail("La date d'échéance doit être antérieure ou égale à l'échéance du projet ({$project->due_date}).");
                 }
             }],
         ], [
             'assigned_to.exists' => "Cette personne doit d'abord être membre du projet pour qu'on puisse lui assigner une tâche.",
+            'start_date.required' => "La date de début est obligatoire.",
+            'due_date.required' => "La date d'échéance est obligatoire.",
         ]);
 
         $task = Task::create([
@@ -83,13 +85,13 @@ class TaskController extends Controller
                 'exists:users,id',
                 Rule::exists('project_members', 'user_id')->where('project_id', $task->project_id),
             ],
-            'start_date' => ['nullable', 'date', 'before_or_equal:due_date', function ($attribute, $value, $fail) use ($task) {
+            'start_date' => ['required', 'date', 'before_or_equal:due_date', function ($attribute, $value, $fail) use ($task) {
                 $project = $task->project;
                 if ($value && $project->start_date && $value < $project->start_date) {
                     $fail("La date de début doit être postérieure ou égale au début du projet ({$project->start_date}).");
                 }
             }],
-            'due_date' => ['nullable', 'date', 'after_or_equal:start_date', function ($attribute, $value, $fail) use ($task) {
+            'due_date' => ['required', 'date', 'after_or_equal:start_date', function ($attribute, $value, $fail) use ($task) {
                 $project = $task->project;
                 if ($value && $project->due_date && $value > $project->due_date) {
                     $fail("La date d'échéance doit être antérieure ou égale à l'échéance du projet ({$project->due_date}).");
@@ -98,6 +100,8 @@ class TaskController extends Controller
             'completed_at' => ['nullable', 'date'],
         ], [
             'assigned_to.exists' => "Cette personne doit d'abord être membre du projet pour qu'on puisse lui assigner une tâche.",
+            'start_date.required' => "La date de début est obligatoire.",
+            'due_date.required' => "La date d'échéance est obligatoire.",
         ]);
 
         $task->update($data);
