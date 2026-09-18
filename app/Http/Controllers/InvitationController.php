@@ -103,12 +103,18 @@ class InvitationController extends Controller
         }
 
         // On renvoie uniquement ce qui est utile à l'affichage (jamais de données sensibles)
+        // `has_account` : true si un compte COMPLET existe (mot de passe défini, donc déjà inscrit).
+        // Un compte "coquille" (status=invite, password=NULL) n'est PAS considéré comme inscrit :
+        // la personne doit d'abord créer son compte.
         return response()->json([
             'token' => $invitation->token,
             'email' => $invitation->email,
             'role' => $invitation->role,
             'expires_at' => $invitation->expires_at,
             'agency' => ['id' => $invitation->agency->id, 'name' => $invitation->agency->name],
+            'has_account' => User::where('email', $invitation->email)
+                ->whereNotNull('password')
+                ->exists(),
         ]);
     }
 
