@@ -16,12 +16,24 @@ class AuthController extends Controller
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'password' => ['required', 'confirmed', Password::min(8)],
             'avatar' => ['nullable', 'string', 'max:1000000'],
         ]);
 
-        $user = User::create([
+        // Un compte "invite" (créé via une invitation) n'a pas encore de mot de passe :
+        // on le réutilise et on le complète au lieu de le bloquer.
+        $user = User::where('email', $data['email'])->first();
+
+        if ($user && $user->status !== 'invite') {
+            return response()->json(['message' => 'Un compte existe déjà avec cet e-mail.'], 422);
+        }
+
+        if (! $user) {
+            $user = new User();
+        }
+
+        $user->fill([
             'name' => trim($data['first_name'].' '.$data['last_name']),
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
@@ -29,7 +41,7 @@ class AuthController extends Controller
             'password' => $data['password'],
             'avatar' => $data['avatar'] ?? null,
             'status' => 'actif',
-        ]);
+        ])->save();
 
         $token = $user->createToken('auth-token')->plainTextToken;
 

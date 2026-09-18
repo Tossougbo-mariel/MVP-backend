@@ -5,6 +5,7 @@ use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\AgencyMemberController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
@@ -17,6 +18,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
+// ── Invitation : aperçu public (la personne n'est pas encore connectée) ──
+Route::get('/invitations/{token}', [InvitationController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
 
     // ── Authentification (protégé) ─────────────────────────
@@ -32,12 +35,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/agencies/{agency}', [AgencyController::class, 'update']);
     Route::delete('/agencies/{agency}', [AgencyController::class, 'destroy']);
 
-    // ── Membres d'agence ─────────────────────────────────────
+     // ── Membres d'agence (membres déjà en place : rôle, statut, retrait) ──
     Route::get('/agencies/{agency}/members', [AgencyMemberController::class, 'index']);
-    Route::post('/agencies/{agency}/members', [AgencyMemberController::class, 'store']);
-    Route::post('/agency-members/{agencyMember}/accept', [AgencyMemberController::class, 'accept']);
     Route::put('/agencies/{agency}/members/{agencyMember}', [AgencyMemberController::class, 'update']);
     Route::delete('/agencies/{agency}/members/{agencyMember}', [AgencyMemberController::class, 'destroy']);
+
+    // ── Invitations d'agence ──
+    Route::get('/agencies/{agency}/invitations', [InvitationController::class, 'index']);
+    Route::post('/agencies/{agency}/invitations', [InvitationController::class, 'store']);
+    Route::post('/agencies/{agency}/invitations/{invitation}/resend', [InvitationController::class, 'resend']);
+    Route::delete('/agencies/{agency}/invitations/{invitation}', [InvitationController::class, 'destroy']);
+    Route::post('/invitations/{token}/accept', [InvitationController::class, 'accept']);
 
     // ── Projets ──────────────────────────────────────────────
     Route::get('/agencies/{agency}/projects', [ProjectController::class, 'index']);

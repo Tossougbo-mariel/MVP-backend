@@ -69,7 +69,7 @@ class AgencyMemberController extends Controller
 
         $data = $request->validate([
             'role' => ['sometimes', 'string', 'in:admin,membre'],
-            'status' => ['sometimes', 'string', 'in:en_attente,actif'],
+            'status' => ['sometimes', 'string', 'in:en_attente,actif,inactif'],
         ]);
 
         abort_if(
