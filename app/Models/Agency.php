@@ -18,6 +18,11 @@ class Agency extends Model
         return $this->hasMany(AgencyMember::class);
     }
 
+    public function invitations()
+    {
+        return $this->hasMany(Invitation::class);
+    }
+
     public function projects()
     {
         return $this->hasMany(Project::class);
