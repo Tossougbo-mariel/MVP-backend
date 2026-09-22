@@ -21,8 +21,28 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name', 'email', 'password', 'avatar', 'status',
+        'name', 'email', 'password', 'avatar', 'status', 'notification_preferences',
         'first_name', 'last_name', 'phone', 'city', 'bio', 'job_title',
+    ];
+
+    /** Préférences de notifications par défaut (toutes activées). */
+    public const DEFAULT_NOTIFICATION_PREFERENCES = [
+        'task_assigned' => true,
+        'task_completed' => true,
+        'task_removed' => true,
+        'comment' => true,
+        'mention' => true,
+        'deadline_reminder' => true,
+    ];
+
+    /** Correspondance type de notification → clé de préférence. */
+    public const NOTIFICATION_TYPE_MAP = [
+        'tache_assignee' => 'task_assigned',
+        'tache_terminee' => 'task_completed',
+        'tache_retiree' => 'task_removed',
+        'nouveau_commentaire' => 'comment',
+        'mention' => 'mention',
+        'rappel_echeance' => 'deadline_reminder',
     ];
 
     protected $hidden = [
@@ -35,6 +55,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -109,5 +130,26 @@ class User extends Authenticatable
         return $this->projectMemberships()
             ->where('project_id', $projectId)
             ->exists();
+    }
+
+    /** Préférences complètes (valeurs par défaut fusionnées). */
+    public function notificationPreferences(): array
+    {
+        return array_merge(
+            self::DEFAULT_NOTIFICATION_PREFERENCES,
+            $this->notification_preferences ?? []
+        );
+    }
+
+    /** L'utilisateur accepte-t-il ce type de notification ? */
+    public function wantsNotification(string $type): bool
+    {
+        $key = self::NOTIFICATION_TYPE_MAP[$type] ?? null;
+
+        if (! $key) {
+            return true;
+        }
+
+        return (bool) ($this->notificationPreferences()[$key] ?? true);
     }
 }

@@ -4,12 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Comment extends Model
+class Attachment extends Model
 {
-    protected $fillable = ['task_id', 'user_id', 'content', 'mention_ids'];
-
-    protected $casts = [
-        'mention_ids' => 'array',
+    protected $fillable = [
+        'task_id', 'user_id', 'file_name', 'file_path', 'file_size', 'mime_type',
     ];
 
     public function task()

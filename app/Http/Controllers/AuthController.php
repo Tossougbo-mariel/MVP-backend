@@ -30,7 +30,7 @@ class AuthController extends Controller
         }
 
         if (! $user) {
-            $user = new User();
+            $user = new User;
         }
 
         $user->fill([
@@ -145,6 +145,32 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json($user);
+    }
+
+    // GET /api/me/notification-preferences
+    public function notificationPreferences(Request $request)
+    {
+        return response()->json($request->user()->notificationPreferences());
+    }
+
+    // PUT /api/me/notification-preferences
+    public function updateNotificationPreferences(Request $request)
+    {
+        $data = $request->validate([
+            'task_assigned' => ['sometimes', 'boolean'],
+            'task_completed' => ['sometimes', 'boolean'],
+            'task_removed' => ['sometimes', 'boolean'],
+            'comment' => ['sometimes', 'boolean'],
+            'mention' => ['sometimes', 'boolean'],
+            'deadline_reminder' => ['sometimes', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $preferences = array_merge($user->notificationPreferences(), $data);
+
+        $user->update(['notification_preferences' => $preferences]);
+
+        return response()->json($preferences);
     }
 
     // POST /api/password/forgot

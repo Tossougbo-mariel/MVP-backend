@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Agency;
 use App\Models\Project;
 use App\Models\User;
 
@@ -15,9 +16,25 @@ class ProjectPolicy
             || $user->roleInAgency($project->agency_id) === 'admin';
     }
 
-    // Créer un projet — admin de l'agence uniquement
+    // Créer un projet — respecte le réglage « qui peut créer des projets »
     public function create(User $user, int $agencyId): bool
     {
+        $agency = Agency::find($agencyId);
+
+        if (! $agency) {
+            return false;
+        }
+
+        $who = $agency->setting('whoCanCreateProjects', 'admin');
+
+        if ($who === 'all') {
+            return $user->isActiveMemberOfAgency($agencyId);
+        }
+
+        if ($who === 'owner') {
+            return $agency->owner_id === $user->id;
+        }
+
         return $user->roleInAgency($agencyId) === 'admin';
     }
 

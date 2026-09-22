@@ -72,7 +72,22 @@ class AgencyController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'settings' => ['sometimes', 'array'],
+            'settings.whoCanInvite' => ['sometimes', 'in:owner,admin,all'],
+            'settings.whoCanCreateProjects' => ['sometimes', 'in:owner,admin,all'],
+            'settings.defaultTaskView' => ['sometimes', 'in:grid,list,kanban'],
+            'settings.defaultMemberRole' => ['sometimes', 'in:admin,membre'],
+            'settings.emailNotifications' => ['sometimes', 'boolean'],
+            'settings.whoCanManageTeams' => ['sometimes', 'in:owner,admin,all'],
+            'settings.defaultTeamMembership' => ['sometimes', 'in:ouverte,fermee'],
         ]);
+
+        // Fusion progressive : on ne touche jamais aux réglages envoyés par une autre requête
+        // et on accepte les mises à jour partielles (le frontend envoie l'objet complet,
+        // mais un envoi partiel doit rester sans danger).
+        if (isset($data['settings'])) {
+            $data['settings'] = array_merge($agency->settings ?? [], $data['settings']);
+        }
 
         $agency->update($data);
 

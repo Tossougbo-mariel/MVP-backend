@@ -10,6 +10,10 @@ class TaskObserver
 {
     public function created(Task $task): void
     {
+        $link = $task->project?->agency_id
+            ? "/agences/{$task->project->agency_id}/projets/{$task->project_id}/taches/{$task->id}"
+            : null;
+
         ActivityLog::create([
             'user_id' => $task->created_by,
             'agency_id' => $task->project?->agency_id,
@@ -20,13 +24,17 @@ class TaskObserver
         ]);
 
         if ($task->assigned_to) {
-            $this->notify($task->assigned_to, 'tache_assignee', 'Nouvelle tâche assignée', "On vous a assigné « {$task->title} »");
+            $this->notify($task->assigned_to, 'tache_assignee', 'Nouvelle tâche assignée', "On vous a assigné « {$task->title} »", $link);
         }
     }
 
     public function updated(Task $task): void
     {
         $userId = auth()->id() ?? $task->created_by;
+
+        $link = $task->project?->agency_id
+            ? "/agences/{$task->project->agency_id}/projets/{$task->project_id}/taches/{$task->id}"
+            : null;
 
         if ($task->wasChanged('status')) {
             ActivityLog::create([
@@ -39,7 +47,7 @@ class TaskObserver
             ]);
 
             if ($task->status === 'terminee' && $task->assigned_to) {
-                $this->notify($task->assigned_to, 'tache_terminee', 'Tâche terminée', "« {$task->title} » a été marquée comme terminée");
+                $this->notify($task->assigned_to, 'tache_terminee', 'Tâche terminée', "« {$task->title} » a été marquée comme terminée", $link);
             }
         }
 
@@ -55,13 +63,13 @@ class TaskObserver
 
             // Le nouveau responsable est notifié
             if ($task->assigned_to) {
-                $this->notify($task->assigned_to, 'tache_assignee', 'Nouvelle tâche assignée', "On vous a assigné « {$task->title} »");
+                $this->notify($task->assigned_to, 'tache_assignee', 'Nouvelle tâche assignée', "On vous a assigné « {$task->title} »", $link);
             }
 
             // L'ancien responsable, s'il y en avait un, est notifié qu'il en est retiré
             $previous = $task->getOriginal('assigned_to');
             if ($previous) {
-                $this->notify($previous, 'tache_retiree', 'Retiré d\'une tâche', "Vous avez été retiré de « {$task->title} »");
+                $this->notify($previous, 'tache_retiree', 'Retiré d\'une tâche', "Vous avez été retiré de « {$task->title} »", $link);
             }
         }
 
@@ -85,16 +93,14 @@ class TaskObserver
                 'action' => 'changement_echeance',
                 'description' => "a changé l'échéance de « {$task->title} »",
             ]);
+
+            // Une nouvelle échéance autorise un nouveau rappel
+            $task->forceFill(['reminder_sent_at' => null])->saveQuietly();
         }
     }
 
-    private function notify(int $userId, string $type, string $title, string $message): void
+    private function notify(int $userId, string $type, string $title, string $message, ?string $link = null): void
     {
-        Notification::create([
-            'user_id' => $userId,
-            'type' => $type,
-            'title' => $title,
-            'message' => $message,
-        ]);
+        Notification::notifyUser($userId, $type, $title, $message, $link);
     }
 }

@@ -31,7 +31,7 @@ class InvitationController extends Controller
     // Envoyer une invitation
     public function store(Request $request, Agency $agency)
     {
-        $this->authorize('manageMembers', $agency);
+        $this->authorize('invite', $agency);
 
         $data = $request->validate([
             'email' => ['required', 'email'],
@@ -62,9 +62,10 @@ class InvitationController extends Controller
             ->update(['status' => 'annulee']);
 
         // 4. Création de l'invitation avec son token secret (40 caractères aléatoires)
+        //    Rôle par défaut : celui du réglage d'agence si l'inviteur n'en précise pas.
         $invitation = $agency->invitations()->create([
             'email' => $email,
-            'role' => $data['role'] ?? 'membre',
+            'role' => $data['role'] ?? $agency->setting('defaultMemberRole', 'membre'),
             'token' => Str::random(40),
             'status' => 'en_attente',
             'invited_by' => $request->user()->id,
@@ -81,7 +82,10 @@ class InvitationController extends Controller
         );
 
         // 6. Envoi de l'e-mail avec le lien d'acceptation
-        $invitedUser->notify(new AgencyInvitation($invitation));
+        //    (seulement si l'agence active les notifications par e-mail)
+        if ($agency->wantsEmails()) {
+            $invitedUser->notify(new AgencyInvitation($invitation));
+        }
 
         return response()->json($invitation, 201);
     }
@@ -130,6 +134,7 @@ class InvitationController extends Controller
 
         if ($invitation->isExpired()) {
             $invitation->update(['status' => 'expiree']);
+
             return response()->json(['message' => 'Cette invitation a expiré.'], 410);
         }
 
@@ -170,7 +175,7 @@ class InvitationController extends Controller
         ]);
 
         $user = User::where('email', $invitation->email)->first();
-        if ($user) {
+        if ($user && $agency->wantsEmails()) {
             $user->notify(new AgencyInvitation($invitation));
         }
 
