@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\AgencyMember;
 use App\Models\Invitation;
+use App\Models\Notification;
 use App\Models\User;
 use App\Notifications\AgencyInvitation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class InvitationController extends Controller
 {
@@ -83,9 +86,19 @@ class InvitationController extends Controller
 
         // 6. Envoi de l'e-mail avec le lien d'acceptation
         //    (seulement si l'agence active les notifications par e-mail)
+        //    ⚠️ Best-effort : un échec SMTP ne doit JAMAIS bloquer l'invitation.
         if ($agency->wantsEmails()) {
-            $invitedUser->notify(new AgencyInvitation($invitation));
+            try {
+                $invitedUser->notify(new AgencyInvitation($invitation));
+            } catch (Throwable $e) {
+                Log::warning('Envoi e-mail d\'invitation échoué : '.$e->getMessage());
+            }
         }
+
+        // 7. Notification in-app (centre de notifications) : visible dès la connexion,
+        //    y compris pour une personne qui n'avait pas encore de compte complet
+        //    (le compte "coquille" est réutilisé à l'inscription, même user_id).
+        $this->notifyInvitation($invitation);
 
         return response()->json($invitation, 201);
     }
@@ -155,6 +168,13 @@ class InvitationController extends Controller
 
         $invitation->update(['status' => 'acceptee']);
 
+        // La notification in-app liée à cette invitation est marquée comme lue
+        $notificationLink = config('app.frontend_url').'/accepter-invitation?token='.$invitation->token;
+        Notification::where('user_id', $request->user()->id)
+            ->where('type', 'invitation')
+            ->where('link', $notificationLink)
+            ->update(['read_at' => now()]);
+
         return response()->json(['ok' => true]);
     }
 
@@ -176,8 +196,14 @@ class InvitationController extends Controller
 
         $user = User::where('email', $invitation->email)->first();
         if ($user && $agency->wantsEmails()) {
-            $user->notify(new AgencyInvitation($invitation));
+            try {
+                $user->notify(new AgencyInvitation($invitation));
+            } catch (Throwable $e) {
+                Log::warning('Envoi e-mail de relance échoué : '.$e->getMessage());
+            }
         }
+
+        $this->notifyInvitation($invitation);
 
         return response()->json($invitation);
     }
@@ -203,6 +229,51 @@ class InvitationController extends Controller
                 ->delete();
         }
 
+        // On retire aussi la notification in-app "Invitation" encore non lue
+        // associée à cette agence pour cet e-mail.
+        if ($user) {
+            Notification::where('user_id', $user->id)
+                ->where('type', 'invitation')
+                ->whereNull('read_at')
+                ->where('title', 'Invitation à rejoindre '.$agency->name)
+                ->delete();
+        }
+
         return response()->json(null, 204);
+    }
+
+    /**
+     * Crée (ou remplace) la notification in-app "Invitation" pour l'utilisateur
+     * concerné, avec un lien direct vers la page de confirmation.
+     *
+     * On écarte les éventuelles invitations non lues de la MÊME agence (même titre)
+     * afin de ne garder qu'un seul lien valide à jour dans le centre de notifications.
+     */
+    private function notifyInvitation(Invitation $invitation): void
+    {
+        $user = User::where('email', $invitation->email)->first();
+        if (! $user) {
+            return;
+        }
+
+        $agencyName = $invitation->agency->name;
+        $title = 'Invitation à rejoindre '.$agencyName;
+        $link = config('app.frontend_url').'/accepter-invitation?token='.$invitation->token;
+        $roleLabel = $invitation->role === 'admin' ? 'administrateur' : 'membre';
+        $inviter = $invitation->invitedBy?->name ?? 'Un administrateur';
+
+        Notification::where('user_id', $user->id)
+            ->where('type', 'invitation')
+            ->whereNull('read_at')
+            ->where('title', $title)
+            ->delete();
+
+        Notification::notifyUser(
+            $user->id,
+            'invitation',
+            $title,
+            "{$inviter} vous invite à rejoindre l'agence « {$agencyName} » en tant que {$roleLabel}. Cliquez pour confirmer votre adhésion.",
+            $link
+        );
     }
 }

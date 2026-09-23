@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password as PasswordBroker;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -178,7 +180,13 @@ class AuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        $status = PasswordBroker::sendResetLink($request->only('email'));
+        try {
+            $status = PasswordBroker::sendResetLink($request->only('email'));
+        } catch (Throwable $e) {
+            Log::warning('Envoi e-mail de réinitialisation échoué : '.$e->getMessage());
+
+            return response()->json(['message' => 'Lien envoyé si ce compte existe.']);
+        }
 
         return $status === PasswordBroker::RESET_LINK_SENT
             ? response()->json(['message' => 'Lien envoyé si ce compte existe.'])
