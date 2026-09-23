@@ -18,7 +18,7 @@ class CommentObserver
             'project_id' => $task->project_id,
             'task_id' => $task->id,
             'action' => 'commentaire',
-            'description' => "a commenté « {$task->title} »",
+            'description' => "a commenté la tâche « {$task->title} »",
         ]);
 
         // On notifie le responsable ET le créateur de la tâche,

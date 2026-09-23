@@ -6,7 +6,28 @@ use Illuminate\Database\Eloquent\Model;
 
 class Agency extends Model
 {
-    protected $fillable = ['name', 'description', 'owner_id'];
+    protected $fillable = ['name', 'description', 'owner_id', 'settings'];
+
+    protected $casts = [
+        'settings' => 'array',
+    ];
+
+    public const DEFAULT_SETTINGS = [
+        'whoCanInvite' => 'owner',
+        'whoCanCreateProjects' => 'admin',
+        'defaultTaskView' => 'grid',
+        'defaultMemberRole' => 'membre',
+        'emailNotifications' => true,
+    ];
+
+    public function getSettingsAttribute($value): array
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        return array_merge(self::DEFAULT_SETTINGS, is_array($value) ? $value : []);
+    }
 
     public function owner()
     {

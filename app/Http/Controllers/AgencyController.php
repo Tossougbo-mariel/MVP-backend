@@ -77,7 +77,19 @@ class AgencyController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'settings' => ['sometimes', 'array'],
+            'settings.whoCanInvite' => ['sometimes', 'string', 'in:owner,admin,all'],
+            'settings.whoCanCreateProjects' => ['sometimes', 'string', 'in:owner,admin,all'],
+            'settings.defaultTaskView' => ['sometimes', 'string', 'in:grid,list,kanban'],
+            'settings.defaultMemberRole' => ['sometimes', 'string', 'in:admin,membre'],
+            'settings.emailNotifications' => ['sometimes', 'boolean'],
         ]);
+
+        // Merge partiel des réglages : on ne stocke que les clés fournies,
+        // sur la base des réglages déjà enregistrés (ou des défauts).
+        if (isset($data['settings'])) {
+            $data['settings'] = array_merge($agency->settings ?? [], $data['settings']);
+        }
 
         $agency->update($data);
 

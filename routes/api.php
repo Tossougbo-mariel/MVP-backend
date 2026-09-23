@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\AgencyMemberController;
+use App\Http\Controllers\BootstrapController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\InvitationController;
@@ -27,6 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::put('/me', [AuthController::class, 'updateProfile']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // ── Bootstrap : tout le nécessaire au démarrage en une seule requête ──
+    Route::get('/bootstrap', [BootstrapController::class, 'index']);
 
     // ── Agences ──────────────────────────────────────────────
     Route::get('/agencies', [AgencyController::class, 'index']);

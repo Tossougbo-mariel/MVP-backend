@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Agency;
 use App\Models\AgencyMember;
 use App\Models\Task;
@@ -47,6 +48,13 @@ class AgencyMemberController extends Controller
         if ($user->wasRecentlyCreated) {
             $user->notify(new AgencyInvitation($agency));
         }
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'agency_id' => $agency->id,
+            'action' => 'membre_ajoute',
+            'description' => "a invité « {$user->email} » à rejoindre l'agence",
+        ]);
 
         return response()->json($membership, 201);
     }

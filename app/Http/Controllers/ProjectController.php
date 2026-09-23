@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Agency;
 use App\Models\Project;
 use Illuminate\Http\Request;
@@ -50,6 +51,14 @@ class ProjectController extends Controller
             'agency_id' => $agency->id,
             'owner_id' => $request->user()->id,
             'status' => 'a_venir',
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $request->user()->id,
+            'agency_id' => $agency->id,
+            'project_id' => $project->id,
+            'action' => 'creation_projet',
+            'description' => "a créé le projet « {$project->name} »",
         ]);
 
         return response()->json($project, 201);

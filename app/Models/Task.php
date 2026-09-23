@@ -2,14 +2,44 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Task extends Model
 {
+    protected $appends = ['deadline_status'];
+
     protected $fillable = [
         'project_id', 'title', 'description', 'status', 'priority',
         'assigned_to', 'created_by', 'start_date', 'due_date', 'completed_at',
     ];
+
+    protected function deadlineStatus(): Attribute
+    {
+        return Attribute::make(get: function (): ?string {
+            if ($this->status === 'terminee') {
+                return null;
+            }
+
+            if (! $this->due_date) {
+                return 'a_venir';
+            }
+
+            $today = Carbon::today();
+            $due = Carbon::parse($this->due_date)->startOfDay();
+
+            if ($due->lt($today)) {
+                return 'en_retard';
+            }
+
+            if ($today->diffInDays($due) <= 3) {
+                return 'a_echeance';
+            }
+
+            return 'a_venir';
+        });
+    }
 
     public function project()
     {
