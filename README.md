@@ -7,6 +7,19 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Scheduled tasks (notifications d'échéances)
+
+La commande `app:check-task-deadlines` envoie les notifications in-app « tâche en retard » et « échéance proche » (assigné + propriétaire de l'agence + admins actifs). Elle est planifiée en `daily()` via `routes/console.php`.
+
+- **Développement** : `composer dev` lance `php artisan schedule:work` automatiquement.
+- **Production** : ajouter une entrée cron qui exécute le scheduler chaque minute :
+
+```cron
+* * * * * cd /path/to/mvp-backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Test manuel : `php artisan app:check-task-deadlines` (idempotent, anti-doublon).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

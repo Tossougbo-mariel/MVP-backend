@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -44,9 +45,24 @@ class ProjectMemberController extends Controller
     }
 
     // DELETE /api/projects/{project}/members/{projectMember}
-    public function destroy(Project $project, ProjectMember $projectMember)
+    public function destroy(Request $request, Project $project, ProjectMember $projectMember)
     {
         $this->authorize('manageMembers', $project);
+
+        abort_if($projectMember->project_id !== $project->id, 404);
+
+        $activeTasks = Task::where('project_id', $project->id)
+            ->where('assigned_to', $projectMember->user_id)
+            ->whereIn('status', ['a_faire', 'en_cours', 'en_revision'])
+            ->count();
+
+        if ($activeTasks > 0 && !$request->boolean('confirm')) {
+            return response()->json([
+                'message' => "Ce membre a {$activeTasks} tâche(s) en cours sur ce projet.",
+                'active_tasks_count' => $activeTasks,
+                'requires_confirmation' => true,
+            ], 409);
+        }
 
         $projectMember->delete();
 

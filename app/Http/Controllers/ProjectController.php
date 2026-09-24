@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Agency;
 use App\Models\Project;
-use App\Models\ProjectMember;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
@@ -16,7 +16,7 @@ class ProjectController extends Controller
 
         $user = $request->user();
 
-        $projects = $user->roleInAgency($agency->id) === 'admin'
+        $projects = $user->isAdminOfAgency($agency->id)
              ? $agency->projects()->get()
              : $agency->projects()->whereHas('members', fn ($q) => $q->where('user_id', $user->id))->get();
 
@@ -31,9 +31,19 @@ class ProjectController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'date'],
-            'due_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['required', 'date', 'after_or_equal:today'],
+            'due_date' => ['required', 'date', 'after_or_equal:start_date'],
             'wallpaper' => ['nullable', 'string'],
+        ], [
+            'name.required' => 'Le nom du projet est obligatoire.',
+            'name.string' => 'Le nom du projet doit être une chaîne de caractères.',
+            'name.max' => 'Le nom du projet ne doit pas dépasser 255 caractères.',
+            'start_date.required' => 'La date de début est obligatoire.',
+            'start_date.date' => 'La date de début doit être une date valide.',
+            'start_date.after_or_equal' => 'La date de début ne peut pas être antérieure à aujourd\'hui.',
+            'due_date.required' => 'La date d\'échéance est obligatoire.',
+            'due_date.date' => 'La date d\'échéance doit être une date valide.',
+            'due_date.after_or_equal' => 'La date d\'échéance doit être postérieure ou égale à la date de début.',
         ]);
 
         $project = Project::create([
@@ -43,10 +53,12 @@ class ProjectController extends Controller
             'status' => 'a_venir',
         ]);
 
-        // Le créateur du projet en devient automatiquement membre
-        ProjectMember::create([
-            'project_id' => $project->id,
+        ActivityLog::create([
             'user_id' => $request->user()->id,
+            'agency_id' => $agency->id,
+            'project_id' => $project->id,
+            'action' => 'creation_projet',
+            'description' => "a créé le projet « {$project->name} »",
         ]);
 
         return response()->json($project, 201);
@@ -68,10 +80,17 @@ class ProjectController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'due_date' => ['nullable', 'date'],
             'status' => ['sometimes', 'string', 'in:a_venir,en_cours,termine,archive'],
             'wallpaper' => ['nullable', 'string'],
+        ], [
+            'name.string' => 'Le nom du projet doit être une chaîne de caractères.',
+            'name.max' => 'Le nom du projet ne doit pas dépasser 255 caractères.',
+            'start_date.date' => 'La date de début doit être une date valide.',
+            'start_date.after_or_equal' => 'La date de début ne peut pas être antérieure à aujourd\'hui.',
+            'due_date.date' => 'La date d\'échéance doit être une date valide.',
+            'status.in' => 'Le statut du projet est invalide.',
         ]);
 
         $project->update($data);
