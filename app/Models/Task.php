@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use App\Support\TaskStatusResolver;
 
 class Task extends Model
 {
@@ -24,7 +25,8 @@ class Task extends Model
     protected function deadlineStatus(): Attribute
     {
         return Attribute::make(get: function (): ?string {
-            if ($this->status === 'terminee') {
+            // Une tâche close n'a plus d'échéance à surveiller.
+            if ($this->isTerminalStatus()) {
                 return null;
             }
 
@@ -50,6 +52,22 @@ class Task extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Le statut courant est-il terminal pour cette agence ?
+     *
+     * Delegue au resolver plutot que de comparer a 'terminee' : chaque agence
+     * peut definir ses propres colonnes, et c'est `is_terminal` qui compte.
+     */
+    public function isTerminalStatus(): bool
+    {
+        $agencyId = $this->project?->agency_id;
+
+        return TaskStatusResolver::isTerminal(
+            $agencyId === null ? null : (int) $agencyId,
+            $this->status
+        );
     }
 
     public function assignee()

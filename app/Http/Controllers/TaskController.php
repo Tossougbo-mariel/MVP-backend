@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\Project;
 use App\Models\Task;
+use App\Support\TaskStatusResolver;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -138,12 +139,18 @@ class TaskController extends Controller
     {
         $this->authorize('updateStatus', $task);
 
+        $agencyId = (int) $task->project->agency_id;
+
+        // Le statut est valide s'il appartient a l'agence (statut dynamique),
+        // avec repli sur les cles historiques.
         $data = $request->validate([
-            'status' => ['required', 'string', 'in:a_faire,en_cours,en_revision,terminee'],
+            'status' => ['required', 'string', Rule::in(TaskStatusResolver::keys($agencyId))],
         ]);
 
-        if ($data['status'] === 'terminee') {
-            $blocking = $task->dependencies()->where('status', '!=', 'terminee')->get();
+        if (TaskStatusResolver::isTerminal($agencyId, $data['status'])) {
+            $terminalKeys = TaskStatusResolver::terminalKeys($agencyId);
+
+            $blocking = $task->dependencies()->whereNotIn('status', $terminalKeys)->get();
             if ($blocking->isNotEmpty()) {
                 return response()->json([
                     'message' => 'Impossible de terminer : cette tâche dépend de « '.$blocking->pluck('title')->implode(' », « ').' » qui n\'est pas encore terminée.',
@@ -170,7 +177,7 @@ class TaskController extends Controller
 
         $task->update($data);
 
-        if ($task->status === 'terminee') {
+        if (TaskStatusResolver::isTerminal($agencyId, $task->status)) {
             $task->update(['completed_at' => now()]);
         }
 
@@ -198,7 +205,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'task_ids' => ['required', 'array'],
             'task_ids.*' => ['integer'],
-            'status' => ['sometimes', 'nullable', 'string', 'in:a_faire,en_cours,en_revision,terminee'],
+            'status' => ['sometimes', 'nullable', 'string', Rule::in(TaskStatusResolver::keys((int) $project->agency_id))],
             'priority' => ['sometimes', 'nullable', 'string', 'in:basse,moyenne,haute,urgente'],
             'assigned_to' => [
                 'sometimes',
@@ -219,9 +226,11 @@ class TaskController extends Controller
             return response()->json(['message' => 'Aucune tâche correspondante dans ce projet.'], 404);
         }
 
-        if (($data['status'] ?? null) === 'terminee') {
+        if (TaskStatusResolver::isTerminal((int) $project->agency_id, $data['status'] ?? null)) {
+            $terminalKeys = TaskStatusResolver::terminalKeys((int) $project->agency_id);
+
             $blocked = $tasks->filter(
-                fn (Task $task) => $task->dependencies()->where('status', '!=', 'terminee')->exists()
+                fn (Task $task) => $task->dependencies()->whereNotIn('status', $terminalKeys)->exists()
             );
 
             if ($blocked->isNotEmpty()) {
@@ -256,7 +265,7 @@ class TaskController extends Controller
                 $updates[$field] = $data[$field];
             }
         }
-        if (($data['status'] ?? null) === 'terminee') {
+        if (TaskStatusResolver::isTerminal((int) $project->agency_id, $updates['status'] ?? null)) {
             $updates['completed_at'] = now();
         }
 
@@ -286,12 +295,11 @@ class TaskController extends Controller
             ->orderBy('id')
             ->get();
 
-        $statusLabels = [
-            'a_faire' => 'À faire',
-            'en_cours' => 'En cours',
-            'en_revision' => 'En révision',
-            'terminee' => 'Terminée',
-        ];
+        // Libellés issus des statuts réels de l'agence (repli sur les
+        // defaults si l'agence n'a rien personnalisé).
+        $statusLabels = TaskStatusResolver::forAgency((int) $agency->id)
+            ->mapWithKeys(fn (array $s) => [$s['key'] => $s['label']])
+            ->all();
         $priorityLabels = [
             'basse' => 'Basse',
             'moyenne' => 'Moyenne',

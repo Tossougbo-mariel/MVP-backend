@@ -55,6 +55,15 @@ class AttachmentController extends Controller
     {
         $this->authorize('view', $attachment->task);
 
+        // Le fichier a pu disparaitre du disque (nettoyage, restauration
+        // incomplete). Sans ce controle, Storage leve une exception et la
+        // reponse est une 500 alors que la situation est un 404.
+        abort_unless(
+            Storage::disk('local')->exists($attachment->file_path),
+            404,
+            "Ce fichier n'est plus disponible.",
+        );
+
         return Storage::disk('local')->download($attachment->file_path, $attachment->file_name);
     }
 

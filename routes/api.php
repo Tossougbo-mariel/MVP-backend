@@ -3,11 +3,14 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\AgencyMemberController;
+use App\Http\Controllers\AgencyTaskStatusController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OtpController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\SubtaskController;
@@ -23,6 +26,14 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 
+// ── Codes à usage unique (OTP) et second facteur ───────────
+Route::prefix('auth')->group(function () {
+    Route::post('/otp/request', [OtpController::class, 'requestLoginCode']);
+    Route::post('/otp/verify', [OtpController::class, 'verifyLoginCode']);
+    Route::post('/two-factor/resend', [OtpController::class, 'resendTwoFactorCode']);
+    Route::post('/two-factor/verify', [OtpController::class, 'verifyTwoFactorCode']);
+});
+
 // ── Invitation : aperçu public (la personne n'est pas encore connectée) ──
 Route::get('/invitations/{token}', [InvitationController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
@@ -34,6 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/notification-preferences', [AuthController::class, 'notificationPreferences']);
     Route::put('/me/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // ── Second facteur (2FA) ────────────────────────────────
+    Route::get('/auth/two-factor', [OtpController::class, 'showTwoFactorState']);
+    Route::put('/auth/two-factor', [OtpController::class, 'updateTwoFactorState']);
 
     // ── Agences ──────────────────────────────────────────────
     Route::get('/agencies', [AgencyController::class, 'index']);
@@ -122,4 +137,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // ── Assistant IA (lecture seule) ─────────────────────────────────────────
+    Route::get('/ai/status', [AiChatController::class, 'status']);
+    Route::post('/ai/chat', [AiChatController::class, 'chat']);
+
+    // ── Statuts de tâches par agence ─────────────────────────────────────────
+    Route::get('/agencies/{agency}/task-statuses', [AgencyTaskStatusController::class, 'index']);
+    Route::post('/agencies/{agency}/task-statuses', [AgencyTaskStatusController::class, 'store']);
+    Route::put('/agencies/{agency}/task-statuses/{agencyTaskStatus}', [AgencyTaskStatusController::class, 'update']);
+    Route::delete('/agencies/{agency}/task-statuses/{agencyTaskStatus}', [AgencyTaskStatusController::class, 'destroy']);
+    Route::post('/agencies/{agency}/task-statuses/{agencyTaskStatus}/reassign', [AgencyTaskStatusController::class, 'reassign']);
 });

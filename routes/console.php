@@ -10,3 +10,9 @@ Artisan::command('inspire', function () {
 
 // Rappel quotidien des tâches dont l'échéance est le lendemain
 Schedule::command('tasks:send-deadline-reminders')->dailyAt('08:00');
+
+// Alertes à 3 jours et signalements de retard. Sans cet enregistrement la
+// commande n'était jamais exécutée : ses notifications restaient muettes.
+Schedule::command('app:check-task-deadlines')
+    ->dailyAt('08:15')
+    ->withoutOverlapping();

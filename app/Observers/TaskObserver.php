@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\ActivityLog;
 use App\Models\Notification;
 use App\Models\Task;
+use App\Support\TaskStatusResolver;
 
 class TaskObserver
 {
@@ -37,7 +38,13 @@ class TaskObserver
             : null;
 
         if ($task->wasChanged('status')) {
-            if ($task->status === 'terminee') {
+            // `is_terminal` (et non la cle 'terminee') definit ce qui cloture
+            // une tache : une agence peut renommer sa colonne de fin.
+            $isTerminal = $task->isTerminalStatus();
+            $label = TaskStatusResolver::forAgency((int) $task->project?->agency_id)
+                ->firstWhere('key', $task->status)['label'] ?? $task->status;
+
+            if ($isTerminal) {
                 ActivityLog::create([
                     'user_id' => $userId,
                     'agency_id' => $task->project?->agency_id,
@@ -53,11 +60,11 @@ class TaskObserver
                     'project_id' => $task->project_id,
                     'task_id' => $task->id,
                     'action' => 'changement_statut',
-                    'description' => "a changé le statut de « {$task->title} » en ".$task->status,
+                    'description' => "a changé le statut de « {$task->title} » en ".$label,
                 ]);
             }
 
-            if ($task->status === 'terminee' && $task->assigned_to) {
+            if ($isTerminal && $task->assigned_to) {
                 $this->notify($task->assigned_to, 'tache_terminee', 'Tâche terminée', "« {$task->title} » a été marquée comme terminée", $link);
             }
         }

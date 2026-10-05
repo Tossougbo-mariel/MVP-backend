@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Notification;
 use App\Models\Task;
+use App\Support\TaskStatusResolver;
 use Illuminate\Console\Command;
 
 class SendDeadlineReminders extends Command
@@ -18,10 +19,14 @@ class SendDeadlineReminders extends Command
 
         $tasks = Task::with('project')
             ->whereNotNull('assigned_to')
-            ->where('status', '!=', 'terminee')
+            ->whereNotIn('status', TaskStatusResolver::allTerminalKeys())
             ->whereDate('due_date', $target)
             ->whereNull('reminder_sent_at')
-            ->get();
+            ->get()
+            // Verification par agence : le statut peut etre terminal pour une
+            // agence et pas pour une autre.
+            ->filter(fn (Task $task) => ! $task->isTerminalStatus())
+            ->values();
 
         foreach ($tasks as $task) {
             $link = $task->project?->agency_id
