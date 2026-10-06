@@ -381,6 +381,78 @@ class AgencyTaskStatusTest extends TestCase
             ->assertJsonValidationErrors('status');
     }
 
+    // ---------- Les membres ne déplacent que leurs tâches ----------
+
+    private function memberOnProject(string $role = 'membre'): User
+    {
+        $member = User::factory()->create();
+        AgencyMember::create([
+            'agency_id' => $this->agency->id,
+            'user_id' => $member->id,
+            'role' => $role,
+            'status' => 'actif',
+        ]);
+        ProjectMember::create([
+            'project_id' => $this->project->id,
+            'user_id' => $member->id,
+        ]);
+
+        return $member;
+    }
+
+    /**
+     * Règle du Kanban : un membre déplace uniquement les tâches qui lui sont
+     * assignées — comme le prévoit TaskPolicy::updateStatus.
+     */
+    public function test_a_member_can_move_a_task_assigned_to_them(): void
+    {
+        $member = $this->memberOnProject();
+        $task = $this->task(['assigned_to' => $member->id, 'status' => 'a_faire']);
+
+        $this->actingAs($member, 'sanctum')
+            ->patchJson("/api/tasks/{$task->id}/status", ['status' => 'en_cours'])
+            ->assertOk();
+
+        $this->assertSame('en_cours', $task->fresh()->status);
+    }
+
+    public function test_a_member_cannot_move_a_task_assigned_to_someone_else(): void
+    {
+        $ownerMember = $this->memberOnProject();
+        $other = $this->memberOnProject();
+        $task = $this->task(['assigned_to' => $ownerMember->id, 'status' => 'a_faire']);
+
+        $this->actingAs($other, 'sanctum')
+            ->patchJson("/api/tasks/{$task->id}/status", ['status' => 'en_cours'])
+            ->assertForbidden();
+
+        $this->assertSame('a_faire', $task->fresh()->status);
+    }
+
+    public function test_a_member_cannot_move_an_unassigned_task(): void
+    {
+        $member = $this->memberOnProject();
+        $task = $this->task(['assigned_to' => null, 'status' => 'a_faire']);
+
+        $this->actingAs($member, 'sanctum')
+            ->patchJson("/api/tasks/{$task->id}/status", ['status' => 'en_cours'])
+            ->assertForbidden();
+
+        $this->assertSame('a_faire', $task->fresh()->status);
+    }
+
+    public function test_an_admin_can_move_any_task(): void
+    {
+        $member = $this->memberOnProject();
+        $task = $this->task(['assigned_to' => $member->id, 'status' => 'a_faire']);
+
+        $this->actingAs($this->owner, 'sanctum')
+            ->patchJson("/api/tasks/{$task->id}/status", ['status' => 'en_cours'])
+            ->assertOk();
+
+        $this->assertSame('en_cours', $task->fresh()->status);
+    }
+
     // ---------- Suppression protégée ----------
 
     public function test_a_status_used_by_tasks_cannot_be_deleted(): void
