@@ -14,7 +14,7 @@ class TaskPolicy
     {
         $agencyId = $task->project->agency_id;
 
-        return $user->isAdminOfAgency($agencyId)
+        return in_array($user->roleInAgency($agencyId), ['admin'], true)
             || $task->project->hasMember($user->id);
     }
 
@@ -23,14 +23,14 @@ class TaskPolicy
     {
         $agencyId = Project::findOrFail($projectId)->agency_id;
 
-        return $user->isAdminOfAgency($agencyId);
+        return $user->roleInAgency($agencyId) === 'admin';
     }
 
     // Modifier une tâche en entier (titre, description, priorité, responsable, dates)
     // — admin uniquement
     public function update(User $user, Task $task): bool
     {
-        return $user->isAdminOfAgency($task->project->agency_id);
+        return $user->roleInAgency($task->project->agency_id) === 'admin';
     }
 
     // Changer UNIQUEMENT le statut — admin, OU membre à qui la tâche est assignée
@@ -38,20 +38,34 @@ class TaskPolicy
     {
         $agencyId = $task->project->agency_id;
 
-        return $user->isAdminOfAgency($agencyId)
+        return $user->roleInAgency($agencyId) === 'admin'
             || $task->assigned_to === $user->id;
     }
 
     // Supprimer une tâche — admin uniquement
     public function delete(User $user, Task $task): bool
     {
-        return $user->isAdminOfAgency($task->project->agency_id);
+        return $user->roleInAgency($task->project->agency_id) === 'admin';
     }
 
     // Commenter — admin, ou membre du projet
     public function comment(User $user, Task $task): bool
     {
-        return $user->isAdminOfAgency($task->project->agency_id)
+        return $user->roleInAgency($task->project->agency_id) === 'admin'
             || $task->project->hasMember($user->id);
+    }
+
+    // Gérer les sous-tâches (créer, cocher, renommer, supprimer)
+    // — admin, ou membre du projet
+    public function manageSubtasks(User $user, Task $task): bool
+    {
+        return $user->roleInAgency($task->project->agency_id) === 'admin'
+            || $task->project->hasMember($user->id);
+    }
+
+    // Attacher / détacher des étiquettes — admin, ou membre du projet
+    public function manageTags(User $user, Task $task): bool
+    {
+        return $this->manageSubtasks($user, $task);
     }
 }

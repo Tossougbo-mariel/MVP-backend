@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TaskStatusResolver;
 use Illuminate\Database\Eloquent\Model;
 
 class Project extends Model
@@ -13,6 +14,15 @@ class Project extends Model
         'due_date', 'status', 'owner_id', 'wallpaper',
     ];
 
+    /**
+     * Avancement du projet, en pourcentage.
+     *
+     * Le poids de chaque statut est derive de sa position dans la liste de
+     * l'agence : la derniere colonne vaut 100, la premiere 0. Les statuts
+     * terminaux valent toujours 100. Sans statuts configures, on retombe sur
+     * les quatre statuts historiques et le resultat est identique a
+     * l'ancien calcul a credits fixes.
+     */
     public function getProgressAttribute(): int
     {
         $tasks = $this->relationLoaded('tasks') ? $this->tasks : $this->tasks()->get();
@@ -22,14 +32,19 @@ class Project extends Model
             return 0;
         }
 
-        $credits = [
-            'a_faire' => 0,
-            'en_cours' => 25,
-            'en_revision' => 70,
-            'terminee' => 100,
-        ];
+        $statuses = TaskStatusResolver::forAgency((int) $this->agency_id)->values();
+        $lastIndex = max(0, $statuses->count() - 1);
 
-        $sum = $tasks->sum(fn ($task) => $credits[$task->status] ?? 0);
+        $credits = [];
+        foreach ($statuses as $i => $status) {
+            $credits[$status['key']] = $status['is_terminal'] || $lastIndex === 0
+                ? 100
+                : (int) round(($i / $lastIndex) * 100);
+        }
+
+        // Statut inconnu pour cette agence : on ne lui attribue aucun credit
+        // plutot que de le deviner.
+        $sum = $tasks->sum(fn (Task $task) => $credits[$task->status] ?? 0);
 
         return (int) round($sum / $total);
     }

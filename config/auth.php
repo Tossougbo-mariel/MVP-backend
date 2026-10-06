@@ -114,4 +114,32 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | One-Time Passwords
+    |--------------------------------------------------------------------------
+    |
+    | Durée de validité, en minutes, des codes à usage unique envoyés par
+    | email : connexion sans mot de passe et second facteur. Le délai minimum
+    | entre deux envois et le plafond horaire sont gérés par OtpService.
+    |
+    */
+
+    'otp' => [
+        'login_ttl' => (int) env('AUTH_OTP_LOGIN_TTL', 10),
+        'two_factor_ttl' => (int) env('AUTH_OTP_TWO_FACTOR_TTL', 10),
+
+        // Durée de vie du ticket temporaire échangé contre un token lors
+        // d'une connexion à deux facteurs.
+        'two_factor_ticket_ttl' => (int) env('AUTH_OTP_TWO_FACTOR_TICKET_TTL', 600),
+
+        // Limitation par IP sur la demande de code, sans rapport avec
+        // l'existence d'un compte (elle ne doit pas être devinable).
+        'request_per_minute' => (int) env('AUTH_OTP_REQUEST_PER_MINUTE', 10),
+
+        // Nombre de vérifications autorisées par IP sur la fenêtre de
+        // limitation, pour freiner le brute-force.
+        'verify_per_minute' => (int) env('AUTH_OTP_VERIFY_PER_MINUTE', 10),
+    ],
+
 ];

@@ -36,9 +36,54 @@ class AgencyPolicy
         return $agency->owner_id === $user->id;
     }
 
-    // Gérer les membres : inviter, promouvoir, retirer — admin uniquement
+    // Gérer les membres : promouvoir, désactiver, retirer — admin uniquement
     public function manageMembers(User $user, Agency $agency): bool
     {
         return $user->isAdminOfAgency($agency->id);
+    }
+
+    // Inviter de nouveaux membres — respecte le réglage « qui peut inviter »
+    public function invite(User $user, Agency $agency): Response
+    {
+        $who = $agency->setting('whoCanInvite', 'owner');
+
+        if ($who === 'all') {
+            return $user->isActiveMemberOfAgency($agency->id)
+                ? Response::allow()
+                : Response::deny('Seul un membre actif peut inviter dans cette agence.');
+        }
+
+        if ($who === 'admin') {
+            return $user->roleInAgency($agency->id) === 'admin'
+                ? Response::allow()
+                : Response::deny('Seul un admin peut inviter dans cette agence.');
+        }
+
+        return $agency->owner_id === $user->id
+            ? Response::allow()
+            : Response::deny('Seul le propriétaire peut inviter dans cette agence.');
+    }
+
+    // Gérer les équipes (créer, renommer, changer les membres, supprimer) —
+    // respecte le réglage « qui peut gérer les équipes »
+    public function manageTeams(User $user, Agency $agency): Response
+    {
+        $who = $agency->setting('whoCanManageTeams', 'admin');
+
+        if ($who === 'all') {
+            return $user->isActiveMemberOfAgency($agency->id)
+                ? Response::allow()
+                : Response::deny('Seul un membre actif peut gérer les équipes.');
+        }
+
+        if ($who === 'admin') {
+            return $user->roleInAgency($agency->id) === 'admin'
+                ? Response::allow()
+                : Response::deny('Seul le propriétaire ou un admin peut gérer les équipes.');
+        }
+
+        return $agency->owner_id === $user->id
+            ? Response::allow()
+            : Response::deny('Seul le propriétaire peut gérer les équipes.');
     }
 }

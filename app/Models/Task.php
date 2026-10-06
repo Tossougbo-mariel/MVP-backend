@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use App\Support\TaskStatusResolver;
 
 class Task extends Model
 {
@@ -13,12 +14,19 @@ class Task extends Model
     protected $fillable = [
         'project_id', 'title', 'description', 'status', 'priority',
         'assigned_to', 'created_by', 'start_date', 'due_date', 'completed_at',
+        'archived_at',
+    ];
+
+    protected $casts = [
+        'reminder_sent_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     protected function deadlineStatus(): Attribute
     {
         return Attribute::make(get: function (): ?string {
-            if ($this->status === 'terminee') {
+            // Une tâche close n'a plus d'échéance à surveiller.
+            if ($this->isTerminalStatus()) {
                 return null;
             }
 
@@ -46,6 +54,22 @@ class Task extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * Le statut courant est-il terminal pour cette agence ?
+     *
+     * Delegue au resolver plutot que de comparer a 'terminee' : chaque agence
+     * peut definir ses propres colonnes, et c'est `is_terminal` qui compte.
+     */
+    public function isTerminalStatus(): bool
+    {
+        $agencyId = $this->project?->agency_id;
+
+        return TaskStatusResolver::isTerminal(
+            $agencyId === null ? null : (int) $agencyId,
+            $this->status
+        );
+    }
+
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
@@ -59,6 +83,43 @@ class Task extends Model
     public function comments()
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function subtasks()
+    {
+        return $this->hasMany(Subtask::class);
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
+    // Tâches dont celle-ci dépend (prérequis)
+    public function dependencies()
+    {
+        return $this->belongsToMany(
+            Task::class,
+            'task_dependencies',
+            'task_id',
+            'depends_on_task_id'
+        );
+    }
+
+    // Tâches qui dépendent de celle-ci
+    public function dependents()
+    {
+        return $this->belongsToMany(
+            Task::class,
+            'task_dependencies',
+            'depends_on_task_id',
+            'task_id'
+        );
     }
 
     public function activityLogs()

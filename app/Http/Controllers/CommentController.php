@@ -25,10 +25,22 @@ class CommentController extends Controller
 
         $data = $request->validate([
             'content' => ['required', 'string'],
+            'mention_ids' => ['sometimes', 'array'],
+            'mention_ids.*' => ['integer'],
         ]);
 
+        // On ne garde que les personnes réellement membres du projet
+        $allowed = $task->project->members()->pluck('user_id')->all();
+        $mentionIds = collect($data['mention_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => in_array($id, $allowed, true))
+            ->unique()
+            ->values()
+            ->all();
+
         $comment = Comment::create([
-            ...$data,
+            'content' => $data['content'],
+            'mention_ids' => $mentionIds,
             'task_id' => $task->id,
             'user_id' => $request->user()->id,
         ]);

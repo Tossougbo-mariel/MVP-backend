@@ -6,7 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Comment extends Model
 {
-    protected $fillable = ['task_id', 'user_id', 'content'];
+    protected $fillable = ['task_id', 'user_id', 'content', 'mention_ids'];
+
+    protected $casts = [
+        'mention_ids' => 'array',
+    ];
 
     public function task()
     {

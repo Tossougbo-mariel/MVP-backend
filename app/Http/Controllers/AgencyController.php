@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\AgencyMember;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class AgencyController extends Controller
 {
@@ -39,22 +38,18 @@ class AgencyController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        $agency = DB::transaction(function () use ($data, $request) {
-            $agency = Agency::create([
-                ...$data,
-                'owner_id' => $request->user()->id,
-            ]);
+        $agency = Agency::create([
+            ...$data,
+            'owner_id' => $request->user()->id,
+        ]);
 
-            // Règle validée plus tôt : celui qui crée l'agence en devient automatiquement Admin
-            AgencyMember::create([
-                'agency_id' => $agency->id,
-                'user_id' => $request->user()->id,
-                'role' => 'admin',
-                'status' => 'actif',
-            ]);
-
-            return $agency;
-        });
+        // Règle validée plus tôt : celui qui crée l'agence en devient automatiquement Admin
+        AgencyMember::create([
+            'agency_id' => $agency->id,
+            'user_id' => $request->user()->id,
+            'role' => 'admin',
+            'status' => 'actif',
+        ]);
 
         return response()->json($agency, 201);
     }
@@ -78,15 +73,18 @@ class AgencyController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'settings' => ['sometimes', 'array'],
-            'settings.whoCanInvite' => ['sometimes', 'string', 'in:owner,admin,all'],
-            'settings.whoCanCreateProjects' => ['sometimes', 'string', 'in:owner,admin,all'],
-            'settings.defaultTaskView' => ['sometimes', 'string', 'in:grid,list,kanban'],
-            'settings.defaultMemberRole' => ['sometimes', 'string', 'in:admin,membre'],
+            'settings.whoCanInvite' => ['sometimes', 'in:owner,admin,all'],
+            'settings.whoCanCreateProjects' => ['sometimes', 'in:owner,admin,all'],
+            'settings.defaultTaskView' => ['sometimes', 'in:grid,list,kanban'],
+            'settings.defaultMemberRole' => ['sometimes', 'in:admin,membre'],
             'settings.emailNotifications' => ['sometimes', 'boolean'],
+            'settings.whoCanManageTeams' => ['sometimes', 'in:owner,admin,all'],
+            'settings.defaultTeamMembership' => ['sometimes', 'in:ouverte,fermee'],
         ]);
 
-        // Merge partiel des réglages : on ne stocke que les clés fournies,
-        // sur la base des réglages déjà enregistrés (ou des défauts).
+        // Fusion progressive : on ne touche jamais aux réglages envoyés par une autre requête
+        // et on accepte les mises à jour partielles (le frontend envoie l'objet complet,
+        // mais un envoi partiel doit rester sans danger).
         if (isset($data['settings'])) {
             $data['settings'] = array_merge($agency->settings ?? [], $data['settings']);
         }

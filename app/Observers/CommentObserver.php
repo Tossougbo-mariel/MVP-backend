@@ -11,6 +11,13 @@ class CommentObserver
     public function created(Comment $comment): void
     {
         $task = $comment->task;
+        $author = $comment->user?->name ?? 'Quelqu\'un';
+        $content = trim((string) $comment->content);
+
+        // Lien direct vers la tâche commentée (pour les notifications)
+        $taskLink = $task->project?->agency_id
+            ? "/agences/{$task->project->agency_id}/projets/{$task->project_id}/taches/{$task->id}"
+            : null;
 
         ActivityLog::create([
             'user_id' => $comment->user_id,
@@ -29,12 +36,31 @@ class CommentObserver
             ->reject(fn ($id) => $id === $comment->user_id);
 
         foreach ($toNotify as $userId) {
-            Notification::create([
-                'user_id' => $userId,
-                'type' => 'nouveau_commentaire',
-                'title' => 'Nouveau commentaire',
-                'message' => "Nouveau commentaire sur « {$task->title} »",
-            ]);
+            Notification::notifyUser(
+                (int) $userId,
+                'nouveau_commentaire',
+                'Nouveau commentaire',
+                "{$author} a commenté « {$task->title} »"
+                    . ($content !== '' ? " : « {$content} »" : ''),
+                $taskLink
+            );
+        }
+
+        // Mentions explicites (@) : on notifie chaque personne mentionnée
+        $mentioned = collect($comment->mention_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn ($id) => $id === $comment->user_id || $toNotify->contains($id));
+
+        foreach ($mentioned as $userId) {
+            Notification::notifyUser(
+                $userId,
+                'mention',
+                'Vous avez été mentionné',
+                "{$author} vous a mentionné sur « {$task->title} »"
+                    . ($content !== '' ? " : « {$content} »" : ''),
+                $taskLink
+            );
         }
     }
 }
