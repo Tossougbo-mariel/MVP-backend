@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Sous-tâches ──────────────────────────────────────────
     Route::get('/tasks/{task}/subtasks', [SubtaskController::class, 'index']);
     Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store']);
+    Route::post('/tasks/{task}/subtasks/complete-all', [SubtaskController::class, 'completeAll']);
     Route::put('/subtasks/{subtask}', [SubtaskController::class, 'update']);
     Route::delete('/subtasks/{subtask}', [SubtaskController::class, 'destroy']);
 

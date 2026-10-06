@@ -52,7 +52,8 @@ class TagController extends Controller
     // DELETE /api/tags/{tag}
     public function destroy(Tag $tag)
     {
-        $this->authorize('manageMembers', $tag->agency);
+        // Tout membre actif de l'agence peut supprimer une etiquette.
+        $this->authorize('view', $tag->agency);
 
         $tag->delete();
 
