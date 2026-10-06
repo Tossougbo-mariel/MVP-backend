@@ -17,7 +17,7 @@ class BootstrapController extends Controller
 
         // Mêmes règles que AgencyController@index : les agences où l'utilisateur est membre actif,
         // avec les membres embarqués (comme AgencyMemberController@index).
-        $agencies = Agency::with(['members.user:id,name,email,avatar,first_name,last_name'])
+        $agencies = Agency::with(['members.user:id,name,email,avatar,first_name,last_name,job_title'])
             ->whereHas('members', function ($query) use ($user) {
                 $query->where('user_id', $user->id)->where('status', 'actif');
             })

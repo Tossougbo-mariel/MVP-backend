@@ -17,7 +17,7 @@ class AgencyMemberController extends Controller
     {
         $this->authorize('view', $agency);
 
-        $members = $agency->members()->with('user:id,name,email,avatar,first_name,last_name')->get();
+        $members = $agency->members()->with('user:id,name,email,avatar,first_name,last_name,job_title')->get();
 
         return response()->json($members);
     }
