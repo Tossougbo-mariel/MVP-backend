@@ -8,14 +8,17 @@ use App\Models\User;
 
 class TaskPolicy
 {
-    // Voir une tâche — admin de l'agence, ou membre du projet auquel elle appartient
-    // (le Kanban doit montrer toutes les tâches du projet, pas juste les siennes)
+    // Voir une tâche en détail — admin, ou membre du projet à qui la tâche est
+    // ASSIGNÉE. Un membre non assigné peut suivre la carte sur le Kanban
+    // (évolution du statut dans les colonnes) mais n'accède pas aux détails
+    // (commentaires, sous-tâches, pièces jointes, activité).
     public function view(User $user, Task $task): bool
     {
         $agencyId = $task->project->agency_id;
+        $isAdmin = in_array($user->roleInAgency($agencyId), ['admin'], true);
 
-        return in_array($user->roleInAgency($agencyId), ['admin'], true)
-            || $task->project->hasMember($user->id);
+        return $isAdmin
+            || ($task->project->hasMember($user->id) && $task->assigned_to === $user->id);
     }
 
     // Créer une tâche — admin uniquement
@@ -33,13 +36,17 @@ class TaskPolicy
         return $user->roleInAgency($task->project->agency_id) === 'admin';
     }
 
+    // L'assigné (ou l'admin) est le seul à pouvoir agir dessus : c'est sa tâche.
+    private function isAssignedOrAdmin(User $user, Task $task): bool
+    {
+        return $user->roleInAgency($task->project->agency_id) === 'admin'
+            || $task->assigned_to === $user->id;
+    }
+
     // Changer UNIQUEMENT le statut — admin, OU membre à qui la tâche est assignée
     public function updateStatus(User $user, Task $task): bool
     {
-        $agencyId = $task->project->agency_id;
-
-        return $user->roleInAgency($agencyId) === 'admin'
-            || $task->assigned_to === $user->id;
+        return $this->isAssignedOrAdmin($user, $task);
     }
 
     // Supprimer une tâche — admin uniquement
@@ -48,22 +55,20 @@ class TaskPolicy
         return $user->roleInAgency($task->project->agency_id) === 'admin';
     }
 
-    // Commenter — admin, ou membre du projet
+    // Commenter — admin, ou assigné à la tâche
     public function comment(User $user, Task $task): bool
     {
-        return $user->roleInAgency($task->project->agency_id) === 'admin'
-            || $task->project->hasMember($user->id);
+        return $this->isAssignedOrAdmin($user, $task);
     }
 
     // Gérer les sous-tâches (créer, cocher, renommer, supprimer)
-    // — admin, ou membre du projet
+    // — admin, ou assigné à la tâche
     public function manageSubtasks(User $user, Task $task): bool
     {
-        return $user->roleInAgency($task->project->agency_id) === 'admin'
-            || $task->project->hasMember($user->id);
+        return $this->isAssignedOrAdmin($user, $task);
     }
 
-    // Attacher / détacher des étiquettes — admin, ou membre du projet
+    // Attacher / détacher des étiquettes — admin, ou assigné à la tâche
     public function manageTags(User $user, Task $task): bool
     {
         return $this->manageSubtasks($user, $task);
