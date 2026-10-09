@@ -7,6 +7,7 @@ use App\Http\Controllers\AgencyTaskStatusController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BootstrapController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
@@ -49,6 +50,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Second facteur (2FA) ────────────────────────────────
     Route::get('/auth/two-factor', [OtpController::class, 'showTwoFactorState']);
     Route::put('/auth/two-factor', [OtpController::class, 'updateTwoFactorState']);
+
+    // ── Bootstrap (chargement initial en une requête) ───────
+    Route::get('/bootstrap', [BootstrapController::class, 'index']);
 
     // ── Agences ──────────────────────────────────────────────
     Route::get('/agencies', [AgencyController::class, 'index']);

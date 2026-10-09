@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Agency;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class ProjectController extends Controller
 {
@@ -77,19 +78,30 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
 
-        $data = $request->validate([
+        $rules = [
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
             'status' => ['sometimes', 'string', 'in:a_venir,en_cours,termine,archive'],
             'wallpaper' => ['nullable', 'string'],
-        ], [
+        ];
+
+        if ($project->due_date) {
+            $rules['due_date'][] = 'after_or_equal:' . Carbon::parse($project->due_date)->toDateString();
+
+            if (array_key_exists('due_date', $request->all())) {
+                $rules['due_date'][] = 'required';
+            }
+        }
+
+        $data = $request->validate($rules, [
             'name.string' => 'Le nom du projet doit être une chaîne de caractères.',
             'name.max' => 'Le nom du projet ne doit pas dépasser 255 caractères.',
             'start_date.date' => 'La date de début doit être une date valide.',
-            'start_date.after_or_equal' => 'La date de début ne peut pas être antérieure à aujourd\'hui.',
             'due_date.date' => 'La date d\'échéance doit être une date valide.',
+            'due_date.required' => 'La date d\'échéance ne peut pas être supprimée une fois définie.',
+            'due_date.after_or_equal' => 'La date d\'échéance ne peut pas être antérieure à l\'échéance déjà définie.',
             'status.in' => 'Le statut du projet est invalide.',
         ]);
 
