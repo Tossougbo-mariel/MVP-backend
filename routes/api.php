@@ -7,6 +7,7 @@ use App\Http\Controllers\AgencyTaskStatusController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BootstrapController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
@@ -45,6 +46,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me/notification-preferences', [AuthController::class, 'notificationPreferences']);
     Route::put('/me/notification-preferences', [AuthController::class, 'updateNotificationPreferences']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // ── Démarrage de l'application : agences (membres, projets, tâches) +
+    //    notifications en UNE seule requête (cf. BootstrapController) ───────
+    Route::get('/bootstrap', [BootstrapController::class, 'index']);
 
     // ── Second facteur (2FA) ────────────────────────────────
     Route::get('/auth/two-factor', [OtpController::class, 'showTwoFactorState']);
@@ -137,7 +142,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Notifications ────────────────────────────────────────
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('/notifications/{notification}/unread', [NotificationController::class, 'markAsUnread']);
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications', [NotificationController::class, 'destroyMany']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
 
     // ── Assistant IA (lecture seule) ─────────────────────────────────────────
     Route::get('/ai/status', [AiChatController::class, 'status']);

@@ -72,6 +72,11 @@ class User extends Authenticatable
         // wantsNotification() les laisserait toujours actives.
         'echeance_proche' => 'deadline_reminder',
         'tache_en_retard' => 'deadline_reminder',
+        // Les notifications de rôles et d'accès (nomme_admin, role_modifie,
+        // compte_active, compte_desactive, membre_retire) sont volontairement
+        // absentes de cette carte : wantsNotification() les livre donc
+        // toujours. Une nomination ou une désactivation n'a pas de réglage à
+        // côté : la personne doit être prévenue, même si elle a coupé le reste.
     ];
 
     protected $hidden = [
