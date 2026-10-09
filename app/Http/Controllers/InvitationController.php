@@ -168,12 +168,36 @@ class InvitationController extends Controller
 
         $invitation->update(['status' => 'acceptee']);
 
-        // La notification in-app liée à cette invitation est marquée comme lue
+        // Nommé administrateur par cette invitation : le fait mérite sa propre
+        // notification, l'invitation ayant été neutralisée juste en dessous et
+        // n'étant plus qu'un message à lire. Même type que lors d'une
+        // promotion depuis la liste des membres.
+        if ($invitation->role === 'admin') {
+            Notification::notifyUser(
+                $request->user()->id,
+                'nomme_admin',
+                'Nommé administrateur',
+                ($invitation->invitedBy?->name ?? 'Un administrateur')
+                    .' vous a nommé administrateur de l\'agence « '.$invitation->agency->name.' ».',
+                '/agences/'.$invitation->agency_id,
+                $invitation->agency_id
+            );
+        }
+
+        // La notification in-app liée à cette invitation passe en état « neutre » :
+        // marquée comme lue et surtout privée de son lien d'adhésion. Elle ne
+        // renvoie plus sur l'invitation (déjà acceptée), ne peut plus être
+        // actionnée et n'existe plus que pour être supprimée.
+        // On vise le lien exact OU l'agence : après un renvoi d'invitation, le
+        // jeton a changé et l'ancienne notification ne portait plus le bon lien.
         $notificationLink = config('app.frontend_url').'/accepter-invitation?token='.$invitation->token;
         Notification::where('user_id', $request->user()->id)
             ->where('type', 'invitation')
-            ->where('link', $notificationLink)
-            ->update(['read_at' => now()]);
+            ->where(function ($query) use ($notificationLink, $invitation) {
+                $query->where('link', $notificationLink)
+                    ->orWhere('agency_id', $invitation->agency_id);
+            })
+            ->update(['read_at' => now(), 'link' => null]);
 
         return response()->json(['ok' => true]);
     }
@@ -273,7 +297,8 @@ class InvitationController extends Controller
             'invitation',
             $title,
             "{$inviter} vous invite à rejoindre l'agence « {$agencyName} » en tant que {$roleLabel}. Cliquez pour confirmer votre adhésion.",
-            $link
+            $link,
+            $invitation->agency_id
         );
     }
 }

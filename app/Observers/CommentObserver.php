@@ -18,6 +18,7 @@ class CommentObserver
         $taskLink = $task->project?->agency_id
             ? "/agences/{$task->project->agency_id}/projets/{$task->project_id}/taches/{$task->id}"
             : null;
+        $agencyId = $task->project?->agency_id;
 
         ActivityLog::create([
             'user_id' => $comment->user_id,
@@ -42,7 +43,8 @@ class CommentObserver
                 'Nouveau commentaire',
                 "{$author} a commenté « {$task->title} »"
                     . ($content !== '' ? " : « {$content} »" : ''),
-                $taskLink
+                $taskLink,
+                $agencyId
             );
         }
 
@@ -59,7 +61,8 @@ class CommentObserver
                 'Vous avez été mentionné',
                 "{$author} vous a mentionné sur « {$task->title} »"
                     . ($content !== '' ? " : « {$content} »" : ''),
-                $taskLink
+                $taskLink,
+                $agencyId
             );
         }
     }

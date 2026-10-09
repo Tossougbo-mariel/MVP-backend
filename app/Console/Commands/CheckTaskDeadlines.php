@@ -110,7 +110,7 @@ class CheckTaskDeadlines extends Command
             // notifyUser et non create() : comme pour toutes les autres
             // notifications, on respecte les preferences de la personne et on
             // diffuse l'evenement temps reel (Reverb).
-            Notification::notifyUser((int) $userId, $type, $title, $message, $link);
+            Notification::notifyUser((int) $userId, $type, $title, $message, $link, $agency?->id);
         }
     }
 }

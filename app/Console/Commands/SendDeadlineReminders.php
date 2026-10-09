@@ -38,7 +38,8 @@ class SendDeadlineReminders extends Command
                 'rappel_echeance',
                 'Échéance proche',
                 "La tâche « {$task->title} » arrive à échéance le {$task->due_date}.",
-                $link
+                $link,
+                $task->project?->agency_id
             );
 
             $task->forceFill(['reminder_sent_at' => now()])->saveQuietly();
