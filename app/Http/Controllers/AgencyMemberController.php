@@ -7,7 +7,6 @@ use App\Models\Agency;
 use App\Models\AgencyMember;
 use App\Models\Task;
 use App\Models\User;
-use App\Notifications\AgencyInvitation;
 use Illuminate\Http\Request;
 
 class AgencyMemberController extends Controller
@@ -44,10 +43,6 @@ class AgencyMemberController extends Controller
                 'status' => 'en_attente',
             ]
         );
-
-        if ($user->wasRecentlyCreated) {
-            $user->notify(new AgencyInvitation($agency));
-        }
 
         ActivityLog::create([
             'user_id' => $request->user()->id,

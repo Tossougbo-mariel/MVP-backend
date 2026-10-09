@@ -32,7 +32,8 @@ class ProjectPolicy
         }
 
         if ($who === 'owner') {
-            return $agency->owner_id === $user->id;
+            return $agency->owner_id === $user->id
+                || $user->roleInAgency($agencyId) === 'admin';
         }
 
         return $user->roleInAgency($agencyId) === 'admin';

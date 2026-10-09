@@ -42,26 +42,21 @@ class AgencyPolicy
         return $user->isAdminOfAgency($agency->id);
     }
 
-    // Inviter de nouveaux membres — respecte le réglage « qui peut inviter »
+    // Inviter de nouveaux membres — le propriétaire et les admins peuvent toujours
+    // inviter ; le réglage « qui peut inviter » ne s'applique qu'aux membres simples
     public function invite(User $user, Agency $agency): Response
     {
-        $who = $agency->setting('whoCanInvite', 'owner');
+        if ($agency->owner_id === $user->id || $user->roleInAgency($agency->id) === 'admin') {
+            return Response::allow();
+        }
 
-        if ($who === 'all') {
+        if ($agency->setting('whoCanInvite', 'owner') === 'all') {
             return $user->isActiveMemberOfAgency($agency->id)
                 ? Response::allow()
                 : Response::deny('Seul un membre actif peut inviter dans cette agence.');
         }
 
-        if ($who === 'admin') {
-            return $user->roleInAgency($agency->id) === 'admin'
-                ? Response::allow()
-                : Response::deny('Seul un admin peut inviter dans cette agence.');
-        }
-
-        return $agency->owner_id === $user->id
-            ? Response::allow()
-            : Response::deny('Seul le propriétaire peut inviter dans cette agence.');
+        return Response::deny('Seul le propriétaire ou un admin peut inviter dans cette agence.');
     }
 
     // Gérer les équipes (créer, renommer, changer les membres, supprimer) —

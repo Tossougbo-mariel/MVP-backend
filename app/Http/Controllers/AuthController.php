@@ -230,12 +230,18 @@ class AuthController extends Controller
         } catch (Throwable $e) {
             Log::warning('Envoi e-mail de réinitialisation échoué : '.$e->getMessage());
 
-            return response()->json(['message' => 'Lien envoyé si ce compte existe.']);
+            return response()->json(
+                ['message' => "L'envoi a échoué. Réessayez dans quelques instants."],
+                502,
+            );
         }
 
         return $status === PasswordBroker::RESET_LINK_SENT
             ? response()->json(['message' => 'Lien envoyé si ce compte existe.'])
-            : response()->json(['message' => 'Impossible d\'envoyer le lien.'], 422);
+            : response()->json(
+                ['message' => "L'envoi a échoué. Réessayez dans quelques instants."],
+                502,
+            );
     }
 
     // POST /api/password/reset

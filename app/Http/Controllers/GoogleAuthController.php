@@ -13,11 +13,12 @@ use Throwable;
 /**
  * Connexion via Google.
  *
- * Choix métier : si un compte existe déjà avec l'adresse Google, la
- * connexion est refusée plutôt que rattachée automatiquement. Un mot de passe
- * peut avoir été choisi par un tiers à l'origine (invitation), le rattacher à
- * un compte Google sans confirmation reviendrait à ouvrir une porte de
- * contournement. L'utilisateur est renvoyé vers la connexion classique.
+ * Choix métier : si un compte existe déjà avec l'adresse Google, la connexion
+ * est acceptée seulement si ce compte n'a pas de mot de passe (créé via Google
+ * ou invitation sans MDP) : Google prouve la possession de l'e-mail. S'il
+ * possède un mot de passe, le rattachement sans confirmation est refusé pour
+ * éviter une porte de contournement ; l'utilisateur est renvoyé vers la
+ * connexion classique.
  */
 class GoogleAuthController extends Controller
 {
@@ -58,11 +59,17 @@ class GoogleAuthController extends Controller
             return $this->backToLogin('google_email_absent');
         }
 
-        if (User::where('email', $email)->exists()) {
-            return $this->backToLogin('email_deja_utilise');
-        }
+        $existing = User::where('email', $email)->first();
 
-        $user = $this->createUser($googleUser, $email);
+        if ($existing) {
+            if ($existing->password !== null) {
+                return $this->backToLogin('email_deja_utilise');
+            }
+
+            $user = $existing;
+        } else {
+            $user = $this->createUser($googleUser, $email);
+        }
         $token = $user->createToken('auth-token')->plainTextToken;
 
         // Le token passe par le fragment (#) : il ne traverse ni les logs du
