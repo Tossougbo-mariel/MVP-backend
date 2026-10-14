@@ -106,7 +106,7 @@ class BootstrapTest extends TestCase
         $task = $this->task(['title' => 'Maquettes']);
 
         $tag = Tag::create([
-            'agency_id' => $this->agency->id,
+            'project_id' => $this->project->id,
             'name' => 'UI',
             'color' => '#123456',
         ]);

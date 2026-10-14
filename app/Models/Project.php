@@ -69,6 +69,11 @@ class Project extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function tags()
+    {
+        return $this->hasMany(Tag::class);
+    }
+
     public function activityLogs()
     {
         return $this->hasMany(ActivityLog::class);

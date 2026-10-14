@@ -113,8 +113,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tasks/{task}/dependencies/{dependency}', [TaskDependencyController::class, 'destroy']);
 
     // ── Étiquettes ───────────────────────────────────────────
-    Route::get('/agencies/{agency}/tags', [TagController::class, 'index']);
-    Route::post('/agencies/{agency}/tags', [TagController::class, 'store']);
+    Route::get('/projects/{project}/tags', [TagController::class, 'index']);
+    Route::post('/projects/{project}/tags', [TagController::class, 'store']);
     Route::put('/tags/{tag}', [TagController::class, 'update']);
     Route::delete('/tags/{tag}', [TagController::class, 'destroy']);
 

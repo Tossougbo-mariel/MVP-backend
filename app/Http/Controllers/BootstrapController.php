@@ -43,6 +43,11 @@ class BootstrapController extends Controller
                     // calendrier) lisent ces relations : sans elles, le front
                     // reçoit des tableaux vides et n'affiche rien.
                     'tasks.dependencies:id,title,status,due_date',
+                    // Les dépendants (tâches qui dépendent de celle-ci) sont
+                    // lus par la page détail ; sans cette relation le repli sur
+                    // les tâches du bootstrap afficherait « Aucune tâche ne
+                    // dépend de celle-ci » à tort.
+                    'tasks.dependents:id,title,status,due_date',
                     'tasks.tags:id,name,color',
                 ])
                 ->get());
