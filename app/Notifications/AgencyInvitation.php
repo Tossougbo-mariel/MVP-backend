@@ -39,13 +39,23 @@ class AgencyInvitation extends Notification implements ShouldQueue
         $url = config('app.frontend_url').'/accepter-invitation?token='.$this->invitation->token;
         $role = $this->invitation->role === 'admin' ? 'Admin' : 'Membre';
         $inviter = $this->invitation->invitedBy?->name;
+        $inviterRole = $inviter
+            ? ucfirst((string) $agency->members()->where('user_id', $this->invitation->invited_by)->value('role'))
+            : null;
 
-        return (new MailMessage)
-            ->subject("Invitation à rejoindre {$agency->name}")
-            ->greeting('Bonjour !')
-            ->line("Vous avez été invité(e) à rejoindre l'agence « {$agency->name} » en tant que {$role}.")
-            ->line($inviter ? "C'est {$inviter} qui vous invite." : 'Votre future équipe vous attend !')
-            ->action('Accepter l\'invitation', $url)
-            ->line('Ce lien est personnel : il ne fonctionnera que pour votre adresse e-mail.');
+     
+     return (new MailMessage)
+    ->subject("Invitation à rejoindre {$agency->name}")
+    ->greeting('Bonjour !')
+    ->line(
+        $inviter
+            ? "Vous avez été invité(e) par {$inviter}"
+                . ($inviterRole ? " ({$inviterRole} de l'agence)" : '')
+                . " à rejoindre l'agence « {$agency->name} » en tant que {$role}."
+            : "Vous avez été invité(e) à rejoindre l'agence « {$agency->name} » en tant que {$role}."
+    )
+    ->action('Accepter l\'invitation', $url)
+    ->line('Votre future équipe vous attend !')
+    ->line('Ce lien est personnel : il ne fonctionnera que pour votre adresse e-mail.');
     }
 }

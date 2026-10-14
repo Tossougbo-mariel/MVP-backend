@@ -55,9 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/two-factor', [OtpController::class, 'showTwoFactorState']);
     Route::put('/auth/two-factor', [OtpController::class, 'updateTwoFactorState']);
 
-    // ── Bootstrap (chargement initial en une requête) ───────
-    Route::get('/bootstrap', [BootstrapController::class, 'index']);
-
     // ── Agences ──────────────────────────────────────────────
     Route::get('/agencies', [AgencyController::class, 'index']);
     Route::post('/agencies', [AgencyController::class, 'store']);

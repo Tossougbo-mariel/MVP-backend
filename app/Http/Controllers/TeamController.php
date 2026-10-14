@@ -37,7 +37,7 @@ class TeamController extends Controller
         $team = $agency->teams()->create([
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
-            'membership' => $data['membership'] ?? $agency->setting('defaultTeamMembership', 'fermee'),
+            'membership' => $data['membership'] ?? 'fermee',
             'created_by' => $request->user()->id,
         ]);
 

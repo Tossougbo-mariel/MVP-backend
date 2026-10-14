@@ -60,25 +60,11 @@ class AgencyPolicy
     }
 
     // Gérer les équipes (créer, renommer, changer les membres, supprimer) —
-    // respecte le réglage « qui peut gérer les équipes »
+    // réservé au propriétaire et aux admins de l'agence.
     public function manageTeams(User $user, Agency $agency): Response
     {
-        $who = $agency->setting('whoCanManageTeams', 'admin');
-
-        if ($who === 'all') {
-            return $user->isActiveMemberOfAgency($agency->id)
-                ? Response::allow()
-                : Response::deny('Seul un membre actif peut gérer les équipes.');
-        }
-
-        if ($who === 'admin') {
-            return $user->roleInAgency($agency->id) === 'admin'
-                ? Response::allow()
-                : Response::deny('Seul le propriétaire ou un admin peut gérer les équipes.');
-        }
-
-        return $agency->owner_id === $user->id
+        return $agency->owner_id === $user->id || $user->isAdminOfAgency($agency->id)
             ? Response::allow()
-            : Response::deny('Seul le propriétaire peut gérer les équipes.');
+            : Response::deny('Seul le propriétaire ou un admin peut gérer les équipes.');
     }
 }

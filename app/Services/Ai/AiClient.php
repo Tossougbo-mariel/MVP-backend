@@ -29,7 +29,7 @@ class AiClient
 
         if ($key === '') {
             throw new RuntimeException(
-                "L'assistant IA n'est pas configure : definissez AI_API_KEY dans le fichier .env du backend."
+                "L'assistant IA n'est pas configurer"
             );
         }
 
@@ -66,7 +66,6 @@ class AiClient
         ];
     }
 
-    /** L'assistant est-il pret a repondre ? */
     public function isConfigured(): bool
     {
         return (bool) config('ai.enabled') && (string) config('ai.api_key') !== '';

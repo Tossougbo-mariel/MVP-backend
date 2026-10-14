@@ -8,7 +8,6 @@ use App\Models\AgencyMember;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\User;
-use App\Notifications\AgencyInvitation;
 use Illuminate\Http\Request;
 
 class AgencyMemberController extends Controller
@@ -45,10 +44,6 @@ class AgencyMemberController extends Controller
                 'status' => 'en_attente',
             ]
         );
-
-        if ($user->wasRecentlyCreated) {
-            $user->notify(new AgencyInvitation($agency));
-        }
 
         // Ajouté (ou promu) directement avec le rôle admin : la personne doit
         // le savoir tout de suite, et pas seulement en ouvrant l'agence.

@@ -38,6 +38,12 @@ class BootstrapController extends Controller
                 ->with([
                     'tasks.assignee:id,name,email,avatar,first_name,last_name',
                     'tasks.creator:id,name,email,avatar,first_name,last_name',
+                    // Le Kanban (badge « Bloquée », étiquettes) et le planning
+                    // (liens de dépendances du Gantt, badge « bloquée » du
+                    // calendrier) lisent ces relations : sans elles, le front
+                    // reçoit des tableaux vides et n'affiche rien.
+                    'tasks.dependencies:id,title,status,due_date',
+                    'tasks.tags:id,name,color',
                 ])
                 ->get());
         }
