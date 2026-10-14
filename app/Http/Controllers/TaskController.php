@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Agency;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\TaskStatusResolver;
@@ -280,59 +279,6 @@ class TaskController extends Controller
 
         return response()->json(
             $tasks->map(fn (Task $task) => $task->fresh()->load('tags:id,name,color'))
-        );
-    }
-
-    // GET /api/agencies/{agency}/tasks/export — export CSV des tâches (admin)
-    public function export(Request $request, Agency $agency)
-    {
-        abort_unless($request->user()->roleInAgency($agency->id) === 'admin', 403);
-
-        $tasks = Task::query()
-            ->whereHas('project', fn ($query) => $query->where('agency_id', $agency->id))
-            ->with(['project:id,name', 'assignee:id,name', 'tags:id,name'])
-            ->orderBy('project_id')
-            ->orderBy('id')
-            ->get();
-
-        // Libellés issus des statuts réels de l'agence (repli sur les
-        // defaults si l'agence n'a rien personnalisé).
-        $statusLabels = TaskStatusResolver::forAgency((int) $agency->id)
-            ->mapWithKeys(fn (array $s) => [$s['key'] => $s['label']])
-            ->all();
-        $priorityLabels = [
-            'basse' => 'Basse',
-            'moyenne' => 'Moyenne',
-            'haute' => 'Haute',
-            'urgente' => 'Urgente',
-        ];
-
-        $callback = function () use ($tasks, $statusLabels, $priorityLabels) {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID', 'Projet', 'Titre', 'Statut', 'Priorité', 'Responsable', 'Début', 'Échéance', 'Étiquettes']);
-
-            foreach ($tasks as $task) {
-                fputcsv($out, [
-                    $task->id,
-                    $task->project?->name,
-                    $task->title,
-                    $statusLabels[$task->status] ?? $task->status,
-                    $priorityLabels[$task->priority] ?? $task->priority,
-                    $task->assignee?->name,
-                    $task->start_date,
-                    $task->due_date,
-                    $task->tags->pluck('name')->implode(', '),
-                ]);
-            }
-
-            fclose($out);
-        };
-
-        return response()->streamDownload(
-            $callback,
-            'taches-'.$agency->id.'-'.now()->format('Y-m-d').'.csv',
-            ['Content-Type' => 'text/csv; charset=UTF-8']
         );
     }
 
