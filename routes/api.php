@@ -104,9 +104,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
     Route::put('/tasks/{task}/tags', [TaskController::class, 'updateTags']);
 
-    // ── Export CSV ───────────────────────────────────────────
-    Route::get('/agencies/{agency}/tasks/export', [TaskController::class, 'export']);
-
     // ── Dépendances entre tâches ─────────────────────────────
     Route::get('/tasks/{task}/dependencies', [TaskDependencyController::class, 'index']);
     Route::post('/tasks/{task}/dependencies', [TaskDependencyController::class, 'store']);

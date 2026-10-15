@@ -12,7 +12,12 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ActivityLog::with('user:id,name,email,avatar')
+        $query = ActivityLog::with([
+                'user:id,name,email,avatar',
+                'agency:id,name',
+                'project:id,name',
+                'task:id,title',
+            ])
             ->orderBy('created_at', 'desc');
 
         if ($request->filled('task_id')) {
