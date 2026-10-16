@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\TaskDependency;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class TaskDependencyController extends Controller
 {
@@ -51,6 +52,24 @@ class TaskDependencyController extends Controller
             422,
             'Cette dépendance créerait une boucle entre les tâches.'
         );
+
+        // Le prérequis ne devrait pas être dû après la tâche qui en dépend.
+        // Avertissement souple : on laisse passer si le client confirme (force).
+        $force = filter_var($request->input('force'), FILTER_VALIDATE_BOOLEAN);
+
+        if (
+            ! $force
+            && $dependency->due_date
+            && $task->due_date
+            && Carbon::parse($dependency->due_date)->gt(Carbon::parse($task->due_date))
+        ) {
+            return response()->json([
+                'message' => "La tâche « {$dependency->title} » est à échéance le {$dependency->due_date}, après l'échéance de la tâche actuelle ({$task->due_date}). Ajouter ce prérequis contraindra la tâche à rester bloquée jusqu'à son achèvement.",
+                'requires_confirmation' => true,
+                'dependency_due_date' => $dependency->due_date,
+                'task_due_date' => $task->due_date,
+            ], 422);
+        }
 
         TaskDependency::create([
             'task_id' => $task->id,

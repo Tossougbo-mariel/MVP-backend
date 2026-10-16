@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\Agency;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Task;
 use App\Support\TaskStatusResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
@@ -86,7 +90,7 @@ class TaskController extends Controller
             'tag_ids' => ['present', 'array'],
             'tag_ids.*' => [
                 'integer',
-                Rule::exists('tags', 'id')->where('agency_id', $task->project->agency_id),
+                Rule::exists('tags', 'id')->where('project_id', $task->project_id),
             ],
         ]);
 
@@ -128,6 +132,21 @@ class TaskController extends Controller
             'due_date.required' => "La date d'échéance est obligatoire.",
         ]);
 
+        // Une nouvelle échéance ne doit pas contredire les dépendances : un
+        // prérequis dû après la tâche, ou une tâche dépendante due avant elle.
+        // Erreur ferme (sans confirmation) : l'utilisateur doit corriger une date.
+        if (! empty($data['due_date'])) {
+            $current = $task->due_date ? Carbon::parse($task->due_date) : null;
+            $newDue = Carbon::parse($data['due_date']);
+
+            if (! $current || ! $current->equalTo($newDue)) {
+                $conflict = $this->dependencyDueDateConflict($task, $newDue->toDateString());
+                if ($conflict !== null) {
+                    return response()->json(['message' => $conflict], 422);
+                }
+            }
+        }
+
         $task->update($data);
 
         return response()->json($task);
@@ -144,7 +163,13 @@ class TaskController extends Controller
         // avec repli sur les cles historiques.
         $data = $request->validate([
             'status' => ['required', 'string', Rule::in(TaskStatusResolver::keys($agencyId))],
+            'cascade' => ['sometimes', 'boolean'],
         ]);
+
+        // Quitte-t-on un statut terminal ? C'est une reouverture : les
+        // dependants deja termines ne sont plus valides et devront peut-etre
+        // etre rouverts (cascade).
+        $wasTerminal = TaskStatusResolver::isTerminal($agencyId, $task->status);
 
         if (TaskStatusResolver::isTerminal($agencyId, $data['status'])) {
             $terminalKeys = TaskStatusResolver::terminalKeys($agencyId);
@@ -174,10 +199,72 @@ class TaskController extends Controller
             }
         }
 
+        // Passage d'un statut terminal vers un statut ouvert : on liste les
+        // dependants deja termines qui seraient incoherents une fois la tache
+        // rouverte. Sans confirmation explicite (cascade), on refuse.
+        $isReopening = $wasTerminal && ! TaskStatusResolver::isTerminal($agencyId, $data['status']);
+
+        $terminalDependents = $isReopening
+            ? $task->dependents()
+                ->get()
+                ->filter(fn (Task $dependent) => TaskStatusResolver::isTerminal($agencyId, $dependent->status))
+                ->values()
+            : collect();
+
+        $cascade = filter_var($request->input('cascade'), FILTER_VALIDATE_BOOLEAN);
+
+        if ($terminalDependents->isNotEmpty() && ! $cascade) {
+            return response()->json([
+                'message' => 'La réouverture de cette tâche va rouvrir '.$terminalDependents->count().' tâche(s) déjà terminée(s).',
+                'requires_cascade' => true,
+                'dependents' => $terminalDependents->map(fn (Task $dependent) => [
+                    'id' => $dependent->id,
+                    'title' => $dependent->title,
+                    'status' => $dependent->status,
+                ])->all(),
+            ], 422);
+        }
+
         $task->update($data);
 
-        if (TaskStatusResolver::isTerminal($agencyId, $task->status)) {
-            $task->update(['completed_at' => now()]);
+        // Le statut terminal pose completed_at ; le quitter doit le retirer,
+        // sinon une tache rouverte resterait comptee comme terminee cote front.
+        $task->update([
+            'completed_at' => TaskStatusResolver::isTerminal($agencyId, $task->status) ? now() : null,
+        ]);
+
+        if ($terminalDependents->isNotEmpty()) {
+            $reopenKey = TaskStatusResolver::reopenKey($agencyId);
+            $actorId = $request->user()?->id;
+
+            foreach ($terminalDependents as $dependent) {
+                // saveQuietly : TaskObserver ne doit pas ajouter son propre log
+                // generique en plus de celui, explicite, de la cascade.
+                $dependent->forceFill([
+                    'status' => $reopenKey,
+                    'completed_at' => null,
+                ])->saveQuietly();
+
+                ActivityLog::create([
+                    'user_id' => $actorId,
+                    'agency_id' => $agencyId,
+                    'project_id' => $dependent->project_id,
+                    'task_id' => $dependent->id,
+                    'action' => 'reouverture',
+                    'description' => "a rouvert la tâche « {$dependent->title} » : son prérequis « {$task->title} » n'est plus terminé.",
+                ]);
+
+                if ($dependent->assigned_to) {
+                    Notification::notifyUser(
+                        (int) $dependent->assigned_to,
+                        'tache_reouverte',
+                        'Tâche réouverte',
+                        "La tâche « {$dependent->title} » a été rouverte : son prérequis « {$task->title} » n'est plus terminé.",
+                        "/agences/{$agencyId}/projets/{$dependent->project_id}/taches/{$dependent->id}",
+                        $agencyId,
+                    );
+                }
+            }
         }
 
         return response()->json($task);
@@ -215,7 +302,7 @@ class TaskController extends Controller
             'add_tag_ids' => ['sometimes', 'array'],
             'add_tag_ids.*' => [
                 'integer',
-                Rule::exists('tags', 'id')->where('agency_id', $project->agency_id),
+                Rule::exists('tags', 'id')->where('project_id', $project->id),
             ],
         ]);
 
@@ -258,14 +345,53 @@ class TaskController extends Controller
             }
         }
 
+        // Reouverture en lot : le bulk ne cascade pas. Si une des taches
+        // rouvertes a des dependants deja termines, on refuse et on liste les
+        // dependants concernes (a rouvrir carte par carte).
+        if (array_key_exists('status', $data) && $data['status'] !== null
+            && ! TaskStatusResolver::isTerminal((int) $project->agency_id, $data['status'])) {
+            $agencyId = (int) $project->agency_id;
+
+            $terminalDependents = collect();
+            foreach ($tasks as $task) {
+                if (! TaskStatusResolver::isTerminal($agencyId, $task->status)) {
+                    continue;
+                }
+                $terminalDependents = $terminalDependents->merge(
+                    $task->dependents()
+                        ->get()
+                        ->filter(fn (Task $dependent) => TaskStatusResolver::isTerminal($agencyId, $dependent->status))
+                );
+            }
+
+            $terminalDependents = $terminalDependents->unique('id')->values();
+
+            if ($terminalDependents->isNotEmpty()) {
+                return response()->json([
+                    'message' => 'La réouverture va rouvrir '.$terminalDependents->count().' tâche(s) déjà terminée(s) : rouvrez-les carte par carte.',
+                    'requires_cascade' => true,
+                    'dependents' => $terminalDependents->map(fn (Task $dependent) => [
+                        'id' => $dependent->id,
+                        'title' => $dependent->title,
+                        'status' => $dependent->status,
+                    ])->all(),
+                ], 422);
+            }
+        }
+
         $updates = [];
         foreach (['status', 'priority', 'assigned_to'] as $field) {
             if (array_key_exists($field, $data)) {
                 $updates[$field] = $data[$field];
             }
         }
-        if (TaskStatusResolver::isTerminal((int) $project->agency_id, $updates['status'] ?? null)) {
-            $updates['completed_at'] = now();
+        // Le statut terminal pose completed_at ; le quitter doit le retirer.
+        // Le garde array_key_exists est essentiel : un bulk de priorite ou de
+        // responsable ne doit pas effacer la date de fin existante.
+        if (array_key_exists('status', $updates)) {
+            $updates['completed_at'] = TaskStatusResolver::isTerminal((int) $project->agency_id, $updates['status'])
+                ? now()
+                : null;
         }
 
         foreach ($tasks as $task) {
@@ -278,7 +404,13 @@ class TaskController extends Controller
         }
 
         return response()->json(
-            $tasks->map(fn (Task $task) => $task->fresh()->load('tags:id,name,color'))
+            $tasks->map(fn (Task $task) => $task->fresh()->load([
+                'tags:id,name,color',
+                // `deadline_status` a besoin des prérequis pour savoir si la
+                // tâche est bloquée ; on les charge pour éviter une requête
+                // par tâche lors de la sérialisation.
+                'dependencies:id,title,status',
+            ]))
         );
     }
 
@@ -310,5 +442,40 @@ class TaskController extends Controller
         $task->update(['archived_at' => null]);
 
         return response()->json($task->load('tags:id,name,color'));
+    }
+
+    /**
+     * Message d'incohérence entre une nouvelle échéance et les dépendances de
+     * la tâche, ou null si tout est cohérent. Deux cas :
+     *  - un prérequis est dû après la nouvelle échéance ;
+     *  - une tâche qui dépend de celle-ci est due avant la nouvelle échéance.
+     */
+    private function dependencyDueDateConflict(Task $task, string $newDue): ?string
+    {
+        $prerequisites = $task->dependencies()
+            ->where('due_date', '>', $newDue)
+            ->get(['tasks.id', 'tasks.title', 'tasks.due_date']);
+
+        if ($prerequisites->isNotEmpty()) {
+            $liste = $prerequisites
+                ->map(fn (Task $t) => "« {$t->title} » (le {$t->due_date})")
+                ->implode(', ');
+
+            return "Impossible de modifier l'échéance : elle deviendrait antérieure à celle de son prérequis {$liste}.";
+        }
+
+        $dependents = $task->dependents()
+            ->where('due_date', '<', $newDue)
+            ->get(['tasks.id', 'tasks.title', 'tasks.due_date']);
+
+        if ($dependents->isNotEmpty()) {
+            $liste = $dependents
+                ->map(fn (Task $t) => "« {$t->title} » (le {$t->due_date})")
+                ->implode(', ');
+
+            return "Impossible de modifier l'échéance : elle deviendrait postérieure à celle de la tâche dépendante {$liste}.";
+        }
+
+        return null;
     }
 }

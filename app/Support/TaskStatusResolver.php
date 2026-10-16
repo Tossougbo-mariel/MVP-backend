@@ -173,6 +173,27 @@ class TaskStatusResolver
     }
 
     /**
+     * Statut cible quand on rouvre une tache terminee.
+     *
+     * Priorite a « En révision » s'il existe pour l'agence ET qu'il ne cloture
+     * pas la tache (une agence pourrait l'avoir rendu terminal). Sinon, on
+     * retombe sur le premier statut ouvert de l'agence.
+     */
+    public static function reopenKey(int $agencyId): string
+    {
+        $statuses = self::forAgency($agencyId);
+
+        $revision = $statuses->firstWhere('key', 'en_revision');
+        if ($revision && ! (bool) $revision['is_terminal']) {
+            return 'en_revision';
+        }
+
+        $first = $statuses->first(fn (array $s) => ! (bool) $s['is_terminal']);
+
+        return (string) ($first['key'] ?? self::defaultKey($agencyId));
+    }
+
+    /**
      * Union de toutes les cles terminales connues (agences configurees +
      * defaults).
      *

@@ -11,6 +11,7 @@ use App\Models\Notification;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Task;
+use App\Models\TaskDependency;
 use App\Models\User;
 use App\Support\TaskStatusResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -232,6 +233,43 @@ class DeadlineReminderTest extends TestCase
         $this->artisan('app:check-task-deadlines')->assertSuccessful();
 
 $this->assertSame(0, $this->deadlineNotifications()->count());
+    }
+
+    public function test_a_blocked_overdue_task_is_not_reported(): void
+    {
+        // Prérequis ouvert, échéance lointaine : il ne déclenche aucune alerte.
+        $prerequisite = $this->makeTask([
+            'title' => 'Prérequis',
+            'due_date' => now()->addDays(30)->toDateString(),
+        ]);
+        $task = $this->makeTask(['due_date' => now()->subDays(2)->toDateString()]);
+        TaskDependency::create([
+            'task_id' => $task->id,
+            'depends_on_task_id' => $prerequisite->id,
+        ]);
+
+        $this->artisan('app:check-task-deadlines')->assertSuccessful();
+
+        // La tâche est en retard mais bloquée : on ne la signale pas.
+        $this->assertSame(0, Notification::where('type', 'tache_en_retard')->count());
+    }
+
+    public function test_a_blocked_approaching_task_is_not_reported(): void
+    {
+        $prerequisite = $this->makeTask([
+            'title' => 'Prérequis',
+            'due_date' => now()->addDays(30)->toDateString(),
+        ]);
+        $task = $this->makeTask(); // échéance par défaut : dans 3 jours
+        TaskDependency::create([
+            'task_id' => $task->id,
+            'depends_on_task_id' => $prerequisite->id,
+        ]);
+
+        $this->artisan('app:check-task-deadlines')->assertSuccessful();
+
+        // L'échéance approche mais la tâche est bloquée : pas d'alerte non plus.
+        $this->assertSame(0, Notification::where('type', 'echeance_proche')->count());
     }
 
     public function test_the_command_is_actually_scheduled(): void

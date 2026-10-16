@@ -2,31 +2,31 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Agency;
+use App\Models\Project;
 use App\Models\Tag;
 use Illuminate\Http\Request;
 
 class TagController extends Controller
 {
-    // GET /api/agencies/{agency}/tags
-    public function index(Agency $agency)
+    // GET /api/projects/{project}/tags
+    public function index(Project $project)
     {
-        $this->authorize('view', $agency);
+        $this->authorize('view', $project);
 
-        return response()->json($agency->tags()->orderBy('name')->get());
+        return response()->json($project->tags()->orderBy('name')->get());
     }
 
-    // POST /api/agencies/{agency}/tags
-    public function store(Request $request, Agency $agency)
+    // POST /api/projects/{project}/tags
+    public function store(Request $request, Project $project)
     {
-        $this->authorize('manageMembers', $agency);
+        $this->authorize('manageMembers', $project);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:50'],
             'color' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $tag = $agency->tags()->firstOrCreate(
+        $tag = $project->tags()->firstOrCreate(
             ['name' => $data['name']],
             ['color' => $data['color'] ?? '#056cf2'],
         );
@@ -37,7 +37,7 @@ class TagController extends Controller
     // PUT /api/tags/{tag}
     public function update(Request $request, Tag $tag)
     {
-        $this->authorize('manageMembers', $tag->agency);
+        $this->authorize('manageMembers', $tag->project);
 
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:50'],
@@ -52,8 +52,8 @@ class TagController extends Controller
     // DELETE /api/tags/{tag}
     public function destroy(Tag $tag)
     {
-        // Tout membre actif de l'agence peut supprimer une etiquette.
-        $this->authorize('view', $tag->agency);
+        // Tout membre du projet peut supprimer une étiquette de ce projet.
+        $this->authorize('view', $tag->project);
 
         $tag->delete();
 

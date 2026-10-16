@@ -30,6 +30,15 @@ class Task extends Model
                 return null;
             }
 
+            // Une tâche bloquée par un prérequis non terminé n'est pas « en
+            // retard » : elle le sera peut-être, mais elle ne peut pas avancer
+            // tant que la dépendance n'est pas close. On neutralise donc son
+            // échéance pour ne pas lui imputer un retard qu'elle ne peut pas
+            // rattraper.
+            if ($this->isBlockedByDependencies()) {
+                return 'a_venir';
+            }
+
             if (! $this->due_date) {
                 return 'a_venir';
             }
@@ -67,6 +76,27 @@ class Task extends Model
         return TaskStatusResolver::isTerminal(
             $agencyId === null ? null : (int) $agencyId,
             $this->status
+        );
+    }
+
+    /**
+     * Au moins un prérequis (dépendance) n'est pas terminé ?
+     *
+     * S'appuie sur la relation déjà chargée quand elle l'est (bootstrap,
+     * index, show) pour éviter une requête par tâche lors d'une
+     * sérialisation en liste.
+     */
+    public function isBlockedByDependencies(): bool
+    {
+        $agencyId = $this->project?->agency_id;
+        $agencyId = $agencyId === null ? null : (int) $agencyId;
+
+        $dependencies = $this->relationLoaded('dependencies')
+            ? $this->dependencies
+            : $this->dependencies()->get(['tasks.id', 'tasks.status']);
+
+        return $dependencies->contains(
+            fn (Task $dependency) => ! TaskStatusResolver::isTerminal($agencyId, $dependency->status)
         );
     }
 

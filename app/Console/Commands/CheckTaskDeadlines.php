@@ -27,9 +27,13 @@ class CheckTaskDeadlines extends Command
             ->whereNotIn('status', $terminalKeys)
             ->whereNotNull('assigned_to')
             ->whereDate('due_date', $today->copy()->addDays(3))
-            ->with(['project.agency.members'])
+            ->with(['project.agency.members', 'dependencies:id,title,status'])
             ->get()
             ->filter(fn (Task $task) => ! $task->isTerminalStatus())
+            // Une tâche bloquée par un prérequis non terminé ne doit pas être
+            // signalée : son échéance est neutralisée (deadline_status =
+            // a_venir) tant que la dépendance n'est pas close.
+            ->filter(fn (Task $task) => ! $task->isBlockedByDependencies())
             ->values();
 
         foreach ($approaching as $task) {
@@ -46,9 +50,12 @@ class CheckTaskDeadlines extends Command
         $overdue = Task::query()
             ->whereNotIn('status', $terminalKeys)
             ->whereDate('due_date', '<', $today)
-            ->with(['project.agency.members'])
+            ->with(['project.agency.members', 'dependencies:id,title,status'])
             ->get()
             ->filter(fn (Task $task) => ! $task->isTerminalStatus())
+            // Idem : un retard imputable à un prérequis non terminé n'est pas
+            // notifié, la tâche n'étant pas en mesure d'avancer.
+            ->filter(fn (Task $task) => ! $task->isBlockedByDependencies())
             ->values();
 
         foreach ($overdue as $task) {

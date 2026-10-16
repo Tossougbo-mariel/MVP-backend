@@ -47,11 +47,6 @@ class Agency extends Model
         return $this->hasMany(Project::class);
     }
 
-    public function tags()
-    {
-        return $this->hasMany(Tag::class);
-    }
-
     public function teams()
     {
         return $this->hasMany(Team::class);

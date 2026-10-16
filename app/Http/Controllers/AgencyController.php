@@ -75,11 +75,8 @@ class AgencyController extends Controller
             'settings' => ['sometimes', 'array'],
             'settings.whoCanInvite' => ['sometimes', 'in:owner,admin,all'],
             'settings.whoCanCreateProjects' => ['sometimes', 'in:owner,admin,all'],
-            'settings.defaultTaskView' => ['sometimes', 'in:grid,list,kanban'],
             'settings.defaultMemberRole' => ['sometimes', 'in:admin,membre'],
             'settings.emailNotifications' => ['sometimes', 'boolean'],
-            'settings.whoCanManageTeams' => ['sometimes', 'in:owner,admin,all'],
-            'settings.defaultTeamMembership' => ['sometimes', 'in:ouverte,fermee'],
         ]);
 
         // Fusion progressive : on ne touche jamais aux réglages envoyés par une autre requête

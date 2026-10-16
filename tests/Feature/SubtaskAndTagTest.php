@@ -153,9 +153,9 @@ class SubtaskAndTagTest extends TestCase
         $this->assertSame(3, $this->task->subtasks()->where('done', true)->count());
     }
 
-    public function test_active_member_can_delete_an_agency_tag(): void
+    public function test_active_member_can_delete_a_project_tag(): void
     {
-        $tag = Tag::create(['agency_id' => $this->agency->id, 'name' => 'Urgent', 'color' => '#ef4444']);
+        $tag = Tag::create(['project_id' => $this->project->id, 'name' => 'Urgent', 'color' => '#ef4444']);
 
         $this->actingAsUser($this->member)->deleteJson("/api/tags/{$tag->id}")
             ->assertNoContent();
@@ -163,9 +163,9 @@ class SubtaskAndTagTest extends TestCase
         $this->assertDatabaseMissing('tags', ['id' => $tag->id]);
     }
 
-    public function test_admin_can_delete_an_agency_tag(): void
+    public function test_admin_can_delete_a_project_tag(): void
     {
-        $tag = Tag::create(['agency_id' => $this->agency->id, 'name' => 'Urgent', 'color' => '#ef4444']);
+        $tag = Tag::create(['project_id' => $this->project->id, 'name' => 'Urgent', 'color' => '#ef4444']);
 
         $this->actingAsUser($this->owner)->deleteJson("/api/tags/{$tag->id}")
             ->assertNoContent();

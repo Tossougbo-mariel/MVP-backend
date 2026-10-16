@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tag extends Model
 {
-    protected $fillable = ['agency_id', 'name', 'color'];
+    protected $fillable = ['project_id', 'name', 'color'];
 
-    public function agency()
+    public function project()
     {
-        return $this->belongsTo(Agency::class);
+        return $this->belongsTo(Project::class);
     }
 
     public function tasks()
