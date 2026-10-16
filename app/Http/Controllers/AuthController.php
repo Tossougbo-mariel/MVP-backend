@@ -20,6 +20,7 @@ class AuthController extends Controller
         protected OtpService $otp,
         protected TwoFactorTicket $tickets,
     ) {}
+
     // POST /api/register
     public function register(Request $request)
     {
@@ -170,6 +171,7 @@ class AuthController extends Controller
             'bio' => ['nullable', 'string', 'max:2000'],
             'job_title' => ['nullable', 'string', 'max:255'],
             'theme_color' => ['nullable', 'string', 'max:50'],
+            'theme' => ['nullable', 'in:dark,light'],
             'avatar' => ['nullable', 'string', 'max:1000000'],
         ]);
 
@@ -182,6 +184,7 @@ class AuthController extends Controller
         $user->bio = $data['bio'] ?? null;
         $user->job_title = $data['job_title'] ?? null;
         $user->theme_color = $data['theme_color'] ?? null;
+        $user->theme = $data['theme'] ?? null;
 
         if (array_key_exists('avatar', $data)) {
             $user->avatar = $data['avatar'] ?? null;

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Agency;
 use App\Models\Notification;
+use App\Support\AgencyPayload;
 use Illuminate\Http\Request;
 
 class BootstrapController extends Controller
@@ -15,43 +15,10 @@ class BootstrapController extends Controller
     {
         $user = $request->user();
 
-        // Mêmes règles que AgencyController@index : les agences où l'utilisateur est membre actif,
-        // avec les membres embarqués (comme AgencyMemberController@index).
-        $agencies = Agency::with(['members.user:id,name,email,avatar,first_name,last_name,job_title'])
-            ->whereHas('members', function ($query) use ($user) {
-                $query->where('user_id', $user->id)->where('status', 'actif');
-            })
-            ->get();
-
-        foreach ($agencies as $agency) {
-            // Rôle de l'utilisateur pour chaque agence (comme AgencyController@index).
-            $agency->my_role = $user->roleInAgency($agency->id);
-
-            // Même filtre de visibilité que ProjectController@index :
-            // l'admin/owner voit tout, le simple membre n'entre que dans ses projets.
-            $projects = $user->isAdminOfAgency($agency->id)
-                ? $agency->projects()
-                : $agency->projects()->whereHas('members', fn ($q) => $q->where('user_id', $user->id));
-
-            // Tâches embarquées avec leurs assignés/créateurs (zéro N+1).
-            $agency->setRelation('projects', $projects
-                ->with([
-                    'tasks.assignee:id,name,email,avatar,first_name,last_name',
-                    'tasks.creator:id,name,email,avatar,first_name,last_name',
-                    // Le Kanban (badge « Bloquée », étiquettes) et le planning
-                    // (liens de dépendances du Gantt, badge « bloquée » du
-                    // calendrier) lisent ces relations : sans elles, le front
-                    // reçoit des tableaux vides et n'affiche rien.
-                    'tasks.dependencies:id,title,status,due_date',
-                    // Les dépendants (tâches qui dépendent de celle-ci) sont
-                    // lus par la page détail ; sans cette relation le repli sur
-                    // les tâches du bootstrap afficherait « Aucune tâche ne
-                    // dépend de celle-ci » à tort.
-                    'tasks.dependents:id,title,status,due_date',
-                    'tasks.tags:id,name,color',
-                ])
-                ->get());
-        }
+        // Agences visibles + projets/tâches (règles de visibilité et relations
+        // embarquées centralisées dans AgencyPayload, partagées avec
+        // GET /api/agencies/{agency}/dashboard).
+        $agencies = AgencyPayload::agencies($user);
 
         // Même shape que NotificationController@index (limit 100).
         $notifications = Notification::where('user_id', $user->id)

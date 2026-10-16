@@ -14,9 +14,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Un membre du projet suit l'évolution d'une tâche sur le Kanban mais n'ouvre
- * sa fiche (détails, commentaires, sous-tâches, pièces jointes) que si la
- * tâche lui est assignée. L'admin accède à tout.
+ * Un membre du projet ouvre la fiche de n'importe quelle tâche du projet
+ * (lecture seule). L'assignation ne conditionne que l'édition : commentaires,
+ * sous-tâches, pièces jointes, dépendances restent réservés à l'assigné ou à
+ * l'admin. L'admin accède à tout.
  */
 class TaskDetailAccessTest extends TestCase
 {
@@ -85,9 +86,24 @@ class TaskDetailAccessTest extends TestCase
             ->assertOk();
     }
 
-    public function test_a_member_cannot_open_a_task_they_are_not_assigned_to(): void
+    public function test_a_project_member_can_open_an_unassigned_task(): void
     {
         $this->actingAs($this->outsider, 'sanctum')
+            ->getJson("/api/tasks/{$this->task->id}")
+            ->assertOk();
+    }
+
+    public function test_a_non_project_member_cannot_open_a_task(): void
+    {
+        $bystander = User::factory()->create();
+        AgencyMember::create([
+            'agency_id' => $this->agency->id,
+            'user_id' => $bystander->id,
+            'role' => 'membre',
+            'status' => 'actif',
+        ]);
+
+        $this->actingAs($bystander, 'sanctum')
             ->getJson("/api/tasks/{$this->task->id}")
             ->assertForbidden();
     }
@@ -108,18 +124,18 @@ class TaskDetailAccessTest extends TestCase
             ->assertJsonPath('0.id', $this->task->id);
     }
 
-    public function test_a_member_cannot_read_subtasks_of_an_unassigned_task(): void
+    public function test_a_member_can_read_subtasks_of_an_unassigned_task(): void
     {
         $this->actingAs($this->outsider, 'sanctum')
             ->getJson("/api/tasks/{$this->task->id}/subtasks")
-            ->assertForbidden();
+            ->assertOk();
     }
 
-    public function test_a_member_cannot_read_comments_of_an_unassigned_task(): void
+    public function test_a_member_can_read_comments_of_an_unassigned_task(): void
     {
         $this->actingAs($this->outsider, 'sanctum')
             ->getJson("/api/tasks/{$this->task->id}/comments")
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_a_member_cannot_comment_on_an_unassigned_task(): void
@@ -129,11 +145,11 @@ class TaskDetailAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_a_member_cannot_read_activity_of_an_unassigned_task(): void
+    public function test_a_member_can_read_activity_of_an_unassigned_task(): void
     {
         $this->actingAs($this->outsider, 'sanctum')
             ->getJson('/api/activity?task_id='.$this->task->id)
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_the_assignee_can_manage_the_subtasks(): void

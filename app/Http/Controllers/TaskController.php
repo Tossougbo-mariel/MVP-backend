@@ -237,6 +237,16 @@ class TaskController extends Controller
             $reopenKey = TaskStatusResolver::reopenKey($agencyId);
             $actorId = $request->user()?->id;
 
+            // Destinataires privilégiés de l'agence (propriétaire + admins.
+            $agency = $task->project?->agency;
+            $privileged = collect([$agency?->owner_id])
+                ->merge(
+                    $agency?->members()
+                        ->where('role', 'admin')
+                        ->where('status', 'actif')
+                        ->pluck('user_id') ?? collect()
+                );
+
             foreach ($terminalDependents as $dependent) {
                 // saveQuietly : TaskObserver ne doit pas ajouter son propre log
                 // generique en plus de celui, explicite, de la cascade.
@@ -254,9 +264,17 @@ class TaskController extends Controller
                     'description' => "a rouvert la tâche « {$dependent->title} » : son prérequis « {$task->title} » n'est plus terminé.",
                 ]);
 
-                if ($dependent->assigned_to) {
+                // La notification part vers l'assigné, le propriétaire et les
+                // admins de l'agence. unique() évite le doublon quand le
+                // propriétaire est aussi admin (cas normal).
+                $recipients = collect([$dependent->assigned_to])
+                    ->merge($privileged)
+                    ->filter()
+                    ->unique();
+
+                foreach ($recipients as $userId) {
                     Notification::notifyUser(
-                        (int) $dependent->assigned_to,
+                        (int) $userId,
                         'tache_reouverte',
                         'Tâche réouverte',
                         "La tâche « {$dependent->title} » a été rouverte : son prérequis « {$task->title} » n'est plus terminé.",
