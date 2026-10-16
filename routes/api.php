@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OtpController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
@@ -157,4 +158,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/agencies/{agency}/task-statuses/{agencyTaskStatus}', [AgencyTaskStatusController::class, 'update']);
     Route::delete('/agencies/{agency}/task-statuses/{agencyTaskStatus}', [AgencyTaskStatusController::class, 'destroy']);
     Route::post('/agencies/{agency}/task-statuses/{agencyTaskStatus}/reassign', [AgencyTaskStatusController::class, 'reassign']);
+
+    // ── Rapports PDF (générés côté serveur, renvoyés en flux) ───────────────
+    Route::get('/projects/{project}/report', [ReportController::class, 'project']);
+    Route::get('/agencies/{agency}/report', [ReportController::class, 'agency']);
 });
