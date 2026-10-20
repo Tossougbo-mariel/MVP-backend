@@ -17,7 +17,7 @@ class AgencyReportBuilder extends ReportBuilder
 {
     public function __construct(private readonly Agency $agency)
     {
-        $this->agency->loadMissing(['projects.owner', 'members.user', 'owner']);
+        $this->agency->loadMissing(['projects.owner', 'projects.tasks', 'members.user', 'owner']);
     }
 
     public function build(): array
@@ -25,6 +25,9 @@ class AgencyReportBuilder extends ReportBuilder
         $agency = $this->agency;
 
         // ---- Liste des projets ----
+        // L'avancement de chaque projet reflete l'etat de ses taches :
+        // il est calcule par Project::getProgressAttribute() en fonction
+        // des statuts configures pour l'agence.
         $projectRows = [];
         foreach ($agency->projects->sortBy('name') as $p) {
             $projectRows[] = [
@@ -33,6 +36,7 @@ class AgencyReportBuilder extends ReportBuilder
                 $p->owner ? $this->memberName($p->owner) : '—',
                 $this->fmtDate($this->parseDate($p->start_date)),
                 $this->fmtDate($this->parseDate($p->due_date)),
+                $p->progress.' %',
             ];
         }
 
@@ -66,9 +70,9 @@ class AgencyReportBuilder extends ReportBuilder
             [
                 'heading' => 'Liste des projets',
                 'type' => 'table',
-                'columns' => ['Projet', 'Statut', 'Responsable', 'Début', 'Échéance'],
-                'align' => ['', '', '', '', ''],
-                'rows' => $projectRows !== [] ? $projectRows : [['Aucun projet', '—', '—', '—', '—']],
+                'columns' => ['Projet', 'Statut', 'Responsable', 'Début', 'Échéance', 'Avancement'],
+                'align' => ['', '', '', '', '', 'num'],
+                'rows' => $projectRows !== [] ? $projectRows : [['Aucun projet', '—', '—', '—', '—', '—']],
             ],
             [
                 'heading' => 'Liste des membres',
