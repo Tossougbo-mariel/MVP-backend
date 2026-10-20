@@ -8,17 +8,15 @@ use App\Models\User;
 
 class TaskPolicy
 {
-    // Voir une tâche en détail — admin, ou membre du projet à qui la tâche est
-    // ASSIGNÉE. Un membre non assigné peut suivre la carte sur le Kanban
-    // (évolution du statut dans les colonnes) mais n'accède pas aux détails
-    // (commentaires, sous-tâches, pièces jointes, activité).
+    // Voir une tâche en détail — admin, ou membre du projet (lecture seule).
+    // L'assignation ne conditionne que l'ÉDITION (statut, commentaires,
+    // sous-tâches, étiquettes, fichiers, dépendances) via les autres méthodes.
     public function view(User $user, Task $task): bool
     {
         $agencyId = $task->project->agency_id;
         $isAdmin = in_array($user->roleInAgency($agencyId), ['admin'], true);
 
-        return $isAdmin
-            || ($task->project->hasMember($user->id) && $task->assigned_to === $user->id);
+        return $isAdmin || $task->project->hasMember($user->id);
     }
 
     // Créer une tâche — admin uniquement

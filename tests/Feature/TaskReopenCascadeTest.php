@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Agency;
 use App\Models\AgencyMember;
 use App\Models\AgencyTaskStatus;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\Task;
@@ -132,6 +133,43 @@ class TaskReopenCascadeTest extends TestCase
             'user_id' => $this->owner->id,
             'type' => 'tache_reouverte',
         ]);
+    }
+
+    public function test_cascade_reopen_notifies_assignee_owner_and_admins(): void
+    {
+        $assignee = User::factory()->create();
+        $admin = User::factory()->create();
+        AgencyMember::create([
+            'agency_id' => $this->agency->id,
+            'user_id' => $admin->id,
+            'role' => 'admin',
+            'status' => 'actif',
+        ]);
+
+        $prerequisite = $this->makeTask('Prérequis', 'terminee');
+        $dependent = $this->makeTask('Dépendante', 'terminee', $assignee->id);
+        $this->link($dependent, $prerequisite);
+
+        $this->actingAs($this->owner, 'sanctum')
+            ->patchJson("/api/tasks/{$prerequisite->id}/status", [
+                'status' => 'en_cours',
+                'cascade' => true,
+            ])
+            ->assertOk();
+
+        // L'assigné, le propriétaire et l'admin reçoivent la notification,
+        // une seule fois chacun (le propriétaire est aussi admin : pas de
+        // doublon).
+        foreach ([$assignee, $this->owner, $admin] as $user) {
+            $this->assertSame(
+                1,
+                Notification::query()
+                    ->where('user_id', $user->id)
+                    ->where('type', 'tache_reouverte')
+                    ->count(),
+                "L'utilisateur {$user->id} devrait recevoir exactement une notification de réouverture."
+            );
+        }
     }
 
     public function test_reopening_without_terminal_dependent_is_a_plain_update(): void

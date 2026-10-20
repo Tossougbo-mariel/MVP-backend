@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\AgencyDashboardController;
 use App\Http\Controllers\AgencyMemberController;
 use App\Http\Controllers\AgencyTaskStatusController;
 use App\Http\Controllers\AiChatController;
@@ -62,6 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/agencies/{agency}', [AgencyController::class, 'show']);
     Route::put('/agencies/{agency}', [AgencyController::class, 'update']);
     Route::delete('/agencies/{agency}', [AgencyController::class, 'destroy']);
+
+    // ── Tableau de bord : résumé d'UNE agence en 1 requête (léger), ───────
+    //    pour ne pas attendre le bootstrap complet (cf. AgencyDashboardController)
+    Route::get('/agencies/{agency}/dashboard', [AgencyDashboardController::class, 'show']);
 
     // ── Membres d'agence (membres déjà en place : rôle, statut, retrait) ──
     Route::get('/agencies/{agency}/members', [AgencyMemberController::class, 'index']);

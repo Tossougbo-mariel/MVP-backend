@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Support\TaskStatusResolver;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class SendDeadlineReminders extends Command
@@ -33,11 +34,13 @@ class SendDeadlineReminders extends Command
                 ? "/agences/{$task->project->agency_id}/projets/{$task->project_id}/taches/{$task->id}"
                 : null;
 
+            $due = Carbon::parse($task->due_date)->format('d/m/Y');
+
             Notification::notifyUser(
                 (int) $task->assigned_to,
                 'rappel_echeance',
                 'Échéance proche',
-                "La tâche « {$task->title} » arrive à échéance le {$task->due_date}.",
+                "La tâche « {$task->title} » arrive à échéance le {$due}.",
                 $link,
                 $task->project?->agency_id
             );
