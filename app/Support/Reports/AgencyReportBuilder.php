@@ -44,8 +44,8 @@ class AgencyReportBuilder extends ReportBuilder
                 continue;
             }
             $role = (int) $u->id === (int) $agency->owner_id
-                ? 'Propriétaire'
-                : ($am->role === 'admin' ? 'Admin' : 'Membre');
+                ? __('reports.rows.agencyOwner')
+                : ($am->role === 'admin' ? __('reports.rows.admin') : __('reports.rows.member'));
 
             $memberRows[] = [
                 $this->memberName($u),
@@ -56,33 +56,47 @@ class AgencyReportBuilder extends ReportBuilder
 
         $sections = [
             [
-                'heading' => 'Informations générales',
+                'heading' => __('reports.general'),
                 'type' => 'keyvalue',
                 'rows' => array_values(array_filter([
-                    ['label' => 'Agence', 'value' => $agency->name],
-                    $agency->owner ? ['label' => 'Propriétaire', 'value' => $this->memberName($agency->owner)] : null,
+                    ['label' => __('reports.keys.agency'), 'value' => $agency->name],
+                    $agency->owner ? ['label' => __('reports.keys.owner'), 'value' => $this->memberName($agency->owner)] : null,
                 ])),
             ],
             [
-                'heading' => 'Liste des projets',
+                'heading' => __('reports.projectList'),
                 'type' => 'table',
-                'columns' => ['Projet', 'Statut', 'Responsable', 'Début', 'Échéance'],
+                'columns' => [
+                    __('reports.columns.project'),
+                    __('reports.columns.status'),
+                    __('reports.columns.assignee'),
+                    __('reports.columns.startDate'),
+                    __('reports.columns.dueDate'),
+                ],
                 'align' => ['', '', '', '', ''],
-                'rows' => $projectRows !== [] ? $projectRows : [['Aucun projet', '—', '—', '—', '—']],
+                'rows' => $projectRows !== []
+                    ? $projectRows
+                    : [[__('reports.rows.noProject'), '—', '—', '—', '—']],
             ],
             [
-                'heading' => 'Liste des membres',
+                'heading' => __('reports.memberList'),
                 'type' => 'table',
-                'columns' => ['Membre', 'Rôle', 'Statut'],
+                'columns' => [
+                    __('reports.columns.member'),
+                    __('reports.columns.role'),
+                    __('reports.columns.status'),
+                ],
                 'align' => ['', '', ''],
-                'rows' => $memberRows !== [] ? $memberRows : [['Aucun membre', '—', '—']],
+                'rows' => $memberRows !== []
+                    ? $memberRows
+                    : [[__('reports.rows.noMember'), '—', '—']],
             ],
         ];
 
         return [
-            'title' => "Rapport d'agence",
+            'title' => __('reports.agencyTitle'),
             'subtitle' => $agency->name,
-            'generatedAt' => $this->fmtLongDate(Carbon::now()).' à '.Carbon::now()->format('H:i'),
+            'generatedAt' => $this->fmtLongDate(Carbon::now()).' '.__('reports.at').' '.Carbon::now()->format('H:i'),
             'description' => $agency->description ?: null,
             'sections' => $sections,
         ];

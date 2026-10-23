@@ -46,7 +46,7 @@ abstract class ReportBuilder
             return '—';
         }
 
-        return ucfirst($d->copy()->locale('fr')->translatedFormat('j F Y'));
+        return ucfirst($d->copy()->locale(app()->getLocale())->translatedFormat('j F Y'));
     }
 
     protected function fmtDate(?Carbon $d): string
@@ -64,33 +64,39 @@ abstract class ReportBuilder
         return ((int) round(($part / $total) * 100)).' %';
     }
 
+    /** Traduit une clé et retombe sur un libellé lisible si elle manque. */
+    protected function translated(string $key, string $fallback): string
+    {
+        $value = __($key);
+
+        return is_string($value) && $value !== $key ? $value : $fallback;
+    }
+
     protected function priorityLabel(?string $key): string
     {
-        return [
-            'urgente' => 'Urgente',
-            'haute' => 'Haute',
-            'moyenne' => 'Moyenne',
-            'basse' => 'Basse',
-        ][$key] ?? ucfirst((string) $key);
+        $key = (string) $key;
+
+        return $key === ''
+            ? '—'
+            : $this->translated("reports.priorities.{$key}", ucfirst($key));
     }
 
     protected function projectStatusLabel(?string $key): string
     {
-        return [
-            'a_venir' => 'À venir',
-            'en_cours' => 'En cours',
-            'termine' => 'Terminé',
-            'archive' => 'Archivé',
-        ][$key] ?? ucfirst((string) $key);
+        $key = (string) $key;
+
+        return $key === ''
+            ? '—'
+            : $this->translated("reports.statuses.project.{$key}", ucfirst($key));
     }
 
     protected function memberStatusLabel(?string $key): string
     {
-        return [
-            'actif' => 'Actif',
-            'en_attente' => 'En attente',
-            'inactif' => 'Inactif',
-        ][$key] ?? ucfirst((string) $key);
+        $key = (string) $key;
+
+        return $key === ''
+            ? '—'
+            : $this->translated("reports.statuses.member.{$key}", ucfirst($key));
     }
 
     protected function memberName(?User $user): string
@@ -171,6 +177,6 @@ abstract class ReportBuilder
             return '—';
         }
 
-        return $days.' '.($days > 1 ? 'jours' : 'jour');
+        return trans_choice('reports.duration', $days, ['count' => $days]);
     }
 }

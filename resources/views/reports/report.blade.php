@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ app()->getLocale() }}">
 <head>
 <meta charset="utf-8">
 <title>{{ $title }}</title>
@@ -90,7 +90,7 @@
 <body>
 
     <div class="footer">
-        <span class="right">Page {PAGE_NUM} / {PAGE_COUNT}</span>
+        <span class="right">{{ __('reports.page') }} {PAGE_NUM} / {PAGE_COUNT}</span>
         <span>{{ $title }} — {{ $subtitle }}</span>
     </div>
 
@@ -101,7 +101,7 @@
         @if (! empty($subtitle))
             <div class="subtitle">{{ $subtitle }}</div>
         @endif
-        <div class="generated">Généré le {{ $generatedAt }}</div>
+        <div class="generated">{{ __('reports.generatedOn') }} {{ $generatedAt }}</div>
     </div>
 
     @if (! empty($description))
@@ -140,7 +140,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ count($section['columns']) }}" class="center muted">Aucune donnée.</td>
+                                <td colspan="{{ count($section['columns']) }}" class="center muted">{{ __('reports.noData') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

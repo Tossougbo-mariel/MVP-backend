@@ -27,7 +27,7 @@ class ProjectReportBuilder extends ReportBuilder
     {
         $project = $this->project;
         $agencyId = (int) $project->agency_id;
-        $agencyName = $project->agency?->name ?? 'Agence';
+        $agencyName = $project->agency?->name ?? __('reports.rows.unknownAgency');
 
         $statuses = TaskStatusResolver::forAgency($agencyId)->values();
         $credits = $this->progressCredits($statuses);
@@ -54,7 +54,9 @@ class ProjectReportBuilder extends ReportBuilder
         $remaining = $this->daysBetween($today, $due);
         $remainingLabel = $remaining === null
             ? '—'
-            : ($remaining >= 0 ? $this->daysLabel($remaining) : 'Dépassée de '.$this->daysLabel(abs($remaining)));
+            : ($remaining >= 0
+                ? $this->daysLabel($remaining)
+                : __('reports.rows.overdueBy', ['duration' => $this->daysLabel(abs($remaining))]));
 
         // ---- Membres du projet ----
         $memberNames = $project->members
@@ -86,42 +88,52 @@ class ProjectReportBuilder extends ReportBuilder
                     $t->title,
                     $this->statusLabel($statuses, $t->status),
                     $this->priorityLabel($t->priority),
-                    $t->assignee ? $this->memberName($t->assignee) : 'Non assignée',
+                    $t->assignee ? $this->memberName($t->assignee) : __('reports.rows.unassigned'),
                     $this->fmtDate($dueOf($t)),
-                    $isOverdue($t) ? 'En retard' : $this->pct($pctOf($t), 100),
+                    $isOverdue($t) ? __('reports.rows.overdue') : $this->pct($pctOf($t), 100),
                 ];
             })
             ->all();
 
         $sections = [
             [
-                'heading' => 'Informations générales',
+                'heading' => __('reports.general'),
                 'type' => 'keyvalue',
                 'rows' => array_values(array_filter([
-                    ['label' => 'Projet', 'value' => $project->name],
-                    ['label' => 'Agence', 'value' => $agencyName],
-                    ['label' => 'Statut', 'value' => $this->projectStatusLabel($project->status)],
-                    $project->owner ? ['label' => 'Responsable', 'value' => $this->memberName($project->owner)] : null,
-                    ['label' => 'Date de début', 'value' => $this->fmtLongDate($start)],
-                    ['label' => 'Date d\'échéance', 'value' => $this->fmtLongDate($due)],
-                    ['label' => 'Durée planifiée', 'value' => $this->daysLabel($plannedDays)],
-                    ['label' => 'Temps restant', 'value' => $remainingLabel],
-                    ['label' => 'Membres du projet', 'value' => $membersValue],
+                    ['label' => __('reports.keys.project'), 'value' => $project->name],
+                    ['label' => __('reports.keys.agency'), 'value' => $agencyName],
+                    ['label' => __('reports.keys.status'), 'value' => $this->projectStatusLabel($project->status)],
+                    $project->owner ? ['label' => __('reports.keys.owner'), 'value' => $this->memberName($project->owner)] : null,
+                    ['label' => __('reports.keys.startDate'), 'value' => $this->fmtLongDate($start)],
+                    ['label' => __('reports.keys.dueDate'), 'value' => $this->fmtLongDate($due)],
+                    ['label' => __('reports.keys.plannedDuration'), 'value' => $this->daysLabel($plannedDays)],
+                    ['label' => __('reports.keys.remainingTime'), 'value' => $remainingLabel],
+                    ['label' => __('reports.keys.projectMembers'), 'value' => $membersValue],
                 ])),
             ],
             [
-                'heading' => 'Détail des tâches',
+                'heading' => __('reports.taskDetails'),
                 'type' => 'table',
-                'columns' => ['N°', 'Tâche', 'Statut', 'Priorité', 'Responsable', 'Échéance', 'Avancement'],
+                'columns' => [
+                    __('reports.columns.number'),
+                    __('reports.columns.task'),
+                    __('reports.columns.status'),
+                    __('reports.columns.priority'),
+                    __('reports.columns.assignee'),
+                    __('reports.columns.dueDate'),
+                    __('reports.columns.progress'),
+                ],
                 'align' => ['num', '', '', '', '', '', 'num'],
-                'rows' => $detailRows !== [] ? $detailRows : [['—', 'Aucune tâche', '—', '—', '—', '—', '—']],
+                'rows' => $detailRows !== []
+                    ? $detailRows
+                    : [['—', __('reports.rows.noTask'), '—', '—', '—', '—', '—']],
             ],
         ];
 
         return [
-            'title' => 'Rapport de projet',
+            'title' => __('reports.projectTitle'),
             'subtitle' => $project->name.' — '.$agencyName,
-            'generatedAt' => $this->fmtLongDate(Carbon::now()).' à '.Carbon::now()->format('H:i'),
+            'generatedAt' => $this->fmtLongDate(Carbon::now()).' '.__('reports.at').' '.Carbon::now()->format('H:i'),
             'description' => $project->description ?: null,
             'sections' => $sections,
         ];

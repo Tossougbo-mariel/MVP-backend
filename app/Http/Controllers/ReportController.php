@@ -7,6 +7,8 @@ use App\Models\Project;
 use App\Support\Reports\AgencyReportBuilder;
 use App\Support\Reports\ProjectReportBuilder;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 
 /**
@@ -20,27 +22,41 @@ use Illuminate\Support\Str;
 class ReportController extends Controller
 {
     // GET /api/projects/{project}/report
-    public function project(Project $project)
+    public function project(Request $request, Project $project)
     {
         $this->authorize('view', $project);
+
+        $locale = $this->locale($request);
+        App::setLocale($locale);
 
         $data = (new ProjectReportBuilder($project))->build();
 
         return Pdf::loadView('reports.report', $data)
             ->setPaper('a4')
-            ->download($this->fileName('rapport', $project->name));
+            ->download($this->fileName($locale === 'en' ? 'project-report' : 'rapport-projet', $project->name));
     }
 
     // GET /api/agencies/{agency}/report
-    public function agency(Agency $agency)
+    public function agency(Request $request, Agency $agency)
     {
         $this->authorize('view', $agency);
+
+        $locale = $this->locale($request);
+        App::setLocale($locale);
 
         $data = (new AgencyReportBuilder($agency))->build();
 
         return Pdf::loadView('reports.report', $data)
             ->setPaper('a4')
-            ->download($this->fileName('rapport-agence', $agency->name));
+            ->download($this->fileName($locale === 'en' ? 'agency-report' : 'rapport-agence', $agency->name));
+    }
+
+    /** Locale du rapport : `fr` par defaut, `en` uniquement si demande. */
+    private function locale(Request $request): string
+    {
+        $locale = (string) $request->query('locale', '');
+
+        return in_array($locale, ['fr', 'en'], true) ? $locale : 'fr';
     }
 
     /** Nom de fichier sur (sans accents ni espaces). */
