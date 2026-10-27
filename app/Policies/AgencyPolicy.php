@@ -21,12 +21,13 @@ class AgencyPolicy
         return true;
     }
 
-    // Modifier les paramètres de l'agence (nom, description) — admin uniquement
+    // Modifier les paramètres de l'agence (nom, description, réglages) —
+    // réservé au propriétaire, comme la page front qui les expose.
     public function update(User $user, Agency $agency): Response
     {
-        return $user->isAdminOfAgency($agency->id)
+        return $agency->owner_id === $user->id
             ? Response::allow()
-            : Response::deny('Seul un admin peut modifier les paramètres de cette agence.');
+            : Response::deny('Seul le propriétaire peut modifier les paramètres de cette agence.');
     }
 
     // Supprimer l'agence — réservé au propriétaire (celui qui l'a créée)

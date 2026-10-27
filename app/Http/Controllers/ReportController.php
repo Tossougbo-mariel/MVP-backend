@@ -7,73 +7,69 @@ use App\Models\Project;
 use App\Support\Reports\AgencyReportBuilder;
 use App\Support\Reports\ProjectReportBuilder;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 
-/**
- * Generation des rapports PDF cote serveur (DOMPDF).
- *
- * Le calcul des donnees est delegue aux builders (App\Support\Reports) ;
- * le rendu HTML/CSS est fait par les vues Blade sous resources/views/reports.
- * Le fichier est renvoye en flux, jamais stocke : il reflete toujours l'etat
- * courant des donnees.
- */
 class ReportController extends Controller
 {
-    // GET /api/projects/{project}/report
-    public function project(Project $project)
+    public function project(Request $request, Project $project)
     {
         $this->authorize('view', $project);
+        $locale = $this->locale($request);
+        App::setLocale($locale);
 
         $data = (new ProjectReportBuilder($project))->build();
+        $prefix = $locale === 'en' ? 'project-report' : 'rapport-projet';
 
         return $this->pdf($data)
-            ->download($this->fileName('rapport', $project->name));
+            ->download($this->fileName($prefix, $project->name));
     }
 
-    // GET /api/agencies/{agency}/report
-    public function agency(Agency $agency)
+    public function agency(Request $request, Agency $agency)
     {
         $this->authorize('view', $agency);
+        $locale = $this->locale($request);
+        App::setLocale($locale);
 
         $data = (new AgencyReportBuilder($agency))->build();
+        $prefix = $locale === 'en' ? 'agency-report' : 'rapport-agence';
 
         return $this->pdf($data)
-            ->download($this->fileName('rapport-agence', $agency->name));
+            ->download($this->fileName($prefix, $agency->name));
     }
 
-    /**
-     * Rendu du PDF commun (vue partagee) avec pied de page canvas :
-     * libelle a gauche, pagination a droite. dompdf ne remplace pas
-     * {PAGE_NUM}/{PAGE_COUNT} dans le corps du document, d'ou ce trace
-     * cote controleur via page_script (repete sur chaque page).
-     */
+    /** Locale du rapport : fr par defaut, en uniquement si demande. */
+    private function locale(Request $request): string
+    {
+        $locale = (string) $request->query('locale', '');
+
+        return in_array($locale, ['fr', 'en'], true) ? $locale : 'fr';
+    }
+
+    /** Rendu PDF partage, avec pagination canvas pour toutes les pages. */
     private function pdf(array $data)
     {
         $label = ! empty($data['subtitle'])
             ? "{$data['title']} : {$data['subtitle']}"
             : $data['title'];
+        $pageLabel = __('reports.page');
 
         $pdf = Pdf::loadView('reports.report', $data)->setPaper('a4');
-
-        // Mise en page complete avant d'enregistrer le pied de page :
-        // page_script s'execute immediatement, il faut que toutes les
-        // pages existent deja pour que la pagination soit juste.
         $pdf->render();
 
-        // Coordonnees A4 (595.28 x 841.89), origine haut-gauche comme le
-        // reste du canevas dompdf. Alignes sur les marges de la vue (22 mm).
         $pdf->getDomPDF()->getCanvas()->page_script(
-            function (int $pageNumber, int $pageCount, $canvas, $fontMetrics) use ($label) {
+            function (int $pageNumber, int $pageCount, $canvas, $fontMetrics) use ($label, $pageLabel) {
                 $font = $fontMetrics->getFont('helvetica');
                 $size = 8.25;
-                $color = [0.42, 0.447, 0.502]; // #6b7280
+                $color = [0.42, 0.447, 0.502];
                 $left = 62.4;
                 $right = 595.28 - 62.4;
                 $y = 799.2;
 
                 $canvas->text($left, $y, $label, $font, $size, $color);
 
-                $page = "Page {$pageNumber} / {$pageCount}";
+                $page = "{$pageLabel} {$pageNumber} / {$pageCount}";
                 $width = $fontMetrics->getTextWidth($page, $font, $size);
                 $canvas->text($right - $width, $y, $page, $font, $size, $color);
             }
@@ -82,7 +78,6 @@ class ReportController extends Controller
         return $pdf;
     }
 
-    /** Nom de fichier sur (sans accents ni espaces). */
     private function fileName(string $prefix, string $value): string
     {
         $slug = Str::slug($value);
