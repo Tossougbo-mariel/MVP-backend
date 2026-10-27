@@ -36,6 +36,7 @@ class AiClient
         $response = Http::withToken($key)
             ->acceptJson()
             ->asJson()
+            ->withOptions(['verify' => config('ai.ca_bundle') ?: true])
             ->timeout((int) config('ai.timeout'))
             ->post(rtrim((string) config('ai.base_url'), '/').'/chat/completions', [
                 'model' => config('ai.model'),

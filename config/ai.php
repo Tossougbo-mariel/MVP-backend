@@ -22,6 +22,9 @@ return [
 
     'base_url' => env('AI_BASE_URL', 'https://api.openai.com/v1'),
 
+    // Optional local CA bundle; TLS verification stays enabled when unset.
+    'ca_bundle' => env('AI_CA_BUNDLE'),
+
     'model' => env('AI_MODEL', 'gpt-4o-mini'),
 
     'timeout' => (int) env('AI_TIMEOUT', 45),
