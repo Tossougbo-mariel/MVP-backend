@@ -8,7 +8,6 @@ use App\Models\Agency;
 use App\Models\AgencyMember;
 use App\Models\Invitation;
 use App\Models\Notification;
-use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

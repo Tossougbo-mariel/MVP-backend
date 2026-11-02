@@ -20,6 +20,7 @@ use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskDependencyController;
+use App\Http\Controllers\TaskTimeEntryController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -103,6 +104,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{project}/tasks', [TaskController::class, 'store']);
     Route::post('/projects/{project}/tasks/bulk', [TaskController::class, 'bulkUpdate']);
     Route::get('/tasks/{task}', [TaskController::class, 'show']);
+    Route::get('/tasks/{task}/time-entries', [TaskTimeEntryController::class, 'index']);
+    Route::post('/tasks/{task}/time-entries', [TaskTimeEntryController::class, 'store']);
+    Route::delete('/time-entries/{entry}', [TaskTimeEntryController::class, 'destroy']);
     Route::put('/tasks/{task}', [TaskController::class, 'update']);
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
     Route::patch('/tasks/{task}/archive', [TaskController::class, 'archive']);

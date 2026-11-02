@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\Agency;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Task;
@@ -57,7 +56,7 @@ class TaskController extends Controller
             }],
         ], [
             'assigned_to.exists' => "Cette personne doit d'abord être membre du projet pour qu'on puisse lui assigner une tâche.",
-            'start_date.required' => "La date de début est obligatoire.",
+            'start_date.required' => 'La date de début est obligatoire.',
             'due_date.required' => "La date d'échéance est obligatoire.",
         ]);
 
@@ -128,7 +127,7 @@ class TaskController extends Controller
             'completed_at' => ['nullable', 'date'],
         ], [
             'assigned_to.exists' => "Cette personne doit d'abord être membre du projet pour qu'on puisse lui assigner une tâche.",
-            'start_date.required' => "La date de début est obligatoire.",
+            'start_date.required' => 'La date de début est obligatoire.',
             'due_date.required' => "La date d'échéance est obligatoire.",
         ]);
 

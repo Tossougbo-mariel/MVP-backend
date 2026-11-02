@@ -56,7 +56,7 @@ class ProjectMemberController extends Controller
             ->whereIn('status', ['a_faire', 'en_cours', 'en_revision'])
             ->count();
 
-        if ($activeTasks > 0 && !$request->boolean('confirm')) {
+        if ($activeTasks > 0 && ! $request->boolean('confirm')) {
             return response()->json([
                 'message' => "Ce membre a {$activeTasks} tâche(s) en cours sur ce projet.",
                 'active_tasks_count' => $activeTasks,

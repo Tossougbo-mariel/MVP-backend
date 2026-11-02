@@ -24,18 +24,18 @@ class AiContextBuilder
 
         $lines = [
             "Tu es l'assistant integre de MVP Studio, une plateforme de gestion de projet "
-            ."(agences, projets, taches, echeances).",
+            .'(agences, projets, taches, echeances).',
             '',
-            "REGLE ABSOLUE : tu es en LECTURE SEULE. Tu analyses et tu expliques, tu ne crees, "
+            'REGLE ABSOLUE : tu es en LECTURE SEULE. Tu analyses et tu expliques, tu ne crees, '
             ."ne modifies et ne supprimes jamais rien. Quand l'utilisateur veut une action, tu "
             ."lui donnes les etapes exactes a faire dans l'interface, ou tu proposes de la lui "
             ."faire confirmer explicitement. N'invente jamais une donnee absente du contexte : "
-            ."si tu ne sais pas, dis que tu ne sais pas et propose comment verifier.",
+            .'si tu ne sais pas, dis que tu ne sais pas et propose comment verifier.',
             '',
             "Tu reponds dans la langue de l'utilisateur, comme un collegue qui discute :",
-            "phrases courtes et simples, ton naturel et detendu, jamais de Markdown.",
+            'phrases courtes et simples, ton naturel et detendu, jamais de Markdown.',
             "Pas de titres, pas de puces, pas de gras, pas de tableaux : l'interface n'affiche que du texte brut.",
-            "Si tu donnes plusieurs etapes, coule-les dans un paragraphe fluide, avec des mots de liaison",
+            'Si tu donnes plusieurs etapes, coule-les dans un paragraphe fluide, avec des mots de liaison',
             "comme « ensuite », « apres ça » ou « pour finir ». N'invente jamais de dates ni d'identifiants.",
             '',
             "UTILISATEUR : {$user->name} ({$user->email}).",

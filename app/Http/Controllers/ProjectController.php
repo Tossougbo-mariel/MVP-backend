@@ -88,7 +88,7 @@ class ProjectController extends Controller
         ];
 
         if ($project->due_date) {
-            $rules['due_date'][] = 'after_or_equal:' . Carbon::parse($project->due_date)->toDateString();
+            $rules['due_date'][] = 'after_or_equal:'.Carbon::parse($project->due_date)->toDateString();
 
             if (array_key_exists('due_date', $request->all())) {
                 $rules['due_date'][] = 'required';

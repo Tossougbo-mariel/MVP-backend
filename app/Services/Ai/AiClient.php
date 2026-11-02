@@ -57,7 +57,7 @@ class AiClient
         $content = $response->json('choices.0.message.content');
 
         if (! is_string($content) || trim($content) === '') {
-            throw new RuntimeException("Le fournisseur IA a renvoye une reponse vide.");
+            throw new RuntimeException('Le fournisseur IA a renvoye une reponse vide.');
         }
 
         return [

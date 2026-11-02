@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -83,7 +84,7 @@ class NotificationController extends Controller
         return response()->json(null, 204);
     }
 
-    private function denyUnlessOwn(Notification $notification): ?\Illuminate\Http\JsonResponse
+    private function denyUnlessOwn(Notification $notification): ?JsonResponse
     {
         if ($notification->user_id !== request()->user()->id) {
             return response()->json(['message' => 'Non autorisé.'], 403);

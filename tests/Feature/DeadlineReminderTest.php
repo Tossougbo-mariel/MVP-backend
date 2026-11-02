@@ -14,6 +14,7 @@ use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\User;
 use App\Support\TaskStatusResolver;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -99,7 +100,7 @@ class DeadlineReminderTest extends TestCase
      * TaskObserver : compter toutes les notifications confondrait l'echec
      * d'une alerte avec le bruit de fond attendu.
      */
-    private function deadlineNotifications(): \Illuminate\Database\Eloquent\Builder
+    private function deadlineNotifications(): Builder
     {
         return Notification::whereIn('type', ['echeance_proche', 'tache_en_retard', 'rappel_echeance']);
     }
@@ -232,7 +233,7 @@ class DeadlineReminderTest extends TestCase
 
         $this->artisan('app:check-task-deadlines')->assertSuccessful();
 
-$this->assertSame(0, $this->deadlineNotifications()->count());
+        $this->assertSame(0, $this->deadlineNotifications()->count());
     }
 
     public function test_a_blocked_overdue_task_is_not_reported(): void

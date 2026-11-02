@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Agency;
 use App\Models\AgencyTaskStatus;
 use App\Models\Task;
@@ -62,7 +61,7 @@ class AgencyTaskStatusController extends Controller
 
         if (AgencyTaskStatus::isReservedKey($key) || $key === '') {
             return response()->json([
-                'message' => "Ce libellé ne peut pas être utilisé comme statut.",
+                'message' => 'Ce libellé ne peut pas être utilisé comme statut.',
             ], 422);
         }
 
@@ -105,7 +104,7 @@ class AgencyTaskStatusController extends Controller
 
         if (! $this->wouldKeepATerminalStatus($agency, $agencyTaskStatus, $data)) {
             return response()->json([
-                'message' => "Une agence doit garder au moins un statut qui clôt une tâche.",
+                'message' => 'Une agence doit garder au moins un statut qui clôt une tâche.',
             ], 422);
         }
 
@@ -178,7 +177,7 @@ class AgencyTaskStatusController extends Controller
 
             if ($terminalCount <= 1) {
                 return response()->json([
-                    'message' => "Impossible de supprimer le dernier statut qui clôt une tâche.",
+                    'message' => 'Impossible de supprimer le dernier statut qui clôt une tâche.',
                 ], 422);
             }
         }
@@ -200,7 +199,7 @@ class AgencyTaskStatusController extends Controller
         ]);
 
         if (! TaskStatusResolver::isValidKey((int) $agency->id, $data['to'])) {
-            return response()->json(['message' => "Statut cible inconnu."], 422);
+            return response()->json(['message' => 'Statut cible inconnu.'], 422);
         }
 
         $count = DB::table('tasks')

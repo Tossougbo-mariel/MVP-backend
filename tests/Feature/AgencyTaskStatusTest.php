@@ -468,7 +468,7 @@ class AgencyTaskStatusTest extends TestCase
         $this->actingAs($this->owner, 'sanctum')
             ->deleteJson("/api/agencies/{$this->agency->id}/task-statuses/{$status->id}")
             ->assertStatus(409)
-            ->assertJsonPath('message', fn ($m) => str_contains($m, "1 tâche(s)"));
+            ->assertJsonPath('message', fn ($m) => str_contains($m, '1 tâche(s)'));
     }
 
     public function test_an_unused_status_can_be_deleted(): void

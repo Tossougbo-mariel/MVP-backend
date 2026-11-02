@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\GoogleProvider;
 use Laravel\Socialite\Two\User as SocialiteGoogleUser;
 use Mockery;
 use Tests\TestCase;
@@ -42,7 +42,7 @@ class GoogleAuthTest extends TestCase
         $googleUser->email = $pick('email', 'claire@gmail.com');
         $googleUser->avatar = $pick('avatar', 'https://lh3.googleusercontent.com/a/photo');
 
-        $provider = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+        $provider = Mockery::mock(GoogleProvider::class);
         $provider->shouldReceive('user')->andReturn($googleUser);
 
         Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
@@ -156,7 +156,7 @@ class GoogleAuthTest extends TestCase
 
     public function test_a_failing_google_call_returns_to_the_login_page(): void
     {
-        $provider = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+        $provider = Mockery::mock(GoogleProvider::class);
         $provider->shouldReceive('user')->andThrow(new \RuntimeException('-state mismatch'));
 
         Socialite::shouldReceive('driver')->with('google')->andReturn($provider);

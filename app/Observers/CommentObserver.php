@@ -42,7 +42,7 @@ class CommentObserver
                 'nouveau_commentaire',
                 'Nouveau commentaire',
                 "{$author} a commenté « {$task->title} »"
-                    . ($content !== '' ? " : « {$content} »" : ''),
+                    .($content !== '' ? " : « {$content} »" : ''),
                 $taskLink,
                 $agencyId
             );
@@ -60,7 +60,7 @@ class CommentObserver
                 'mention',
                 'Vous avez été mentionné',
                 "{$author} vous a mentionné sur « {$task->title} »"
-                    . ($content !== '' ? " : « {$content} »" : ''),
+                    .($content !== '' ? " : « {$content} »" : ''),
                 $taskLink,
                 $agencyId
             );

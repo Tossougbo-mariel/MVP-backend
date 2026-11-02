@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Support\TaskStatusResolver;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
-use App\Support\TaskStatusResolver;
 
 class Task extends Model
 {
@@ -113,6 +113,11 @@ class Task extends Model
     public function comments()
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function timeEntries()
+    {
+        return $this->hasMany(TaskTimeEntry::class);
     }
 
     public function subtasks()
